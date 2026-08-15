@@ -37,12 +37,22 @@ of having no build step: change the nav in one file, change it in all seven.
 
 ## Deploy
 
-Repo: `sadekar-onkar/sadekar-onkar.github.io`, branch **`gh-pages`** (that is
-what GitHub Pages serves — not `main`/`master`).
+Repo: `sadekar-onkar/sadekar-onkar.github.io`, branch **`gh-pages`**.
 
 ```bash
 git add -A && git commit -m "..." && git push origin gh-pages
 ```
+
+**Important:** this repo's Pages setting is `build_type: workflow`, so a push to
+`gh-pages` does **not** publish anything by itself — `.github/workflows/pages.yml`
+is what actually deploys. Before it existed, the last successful deployment was
+December 2023, which is why commits made to `gh-pages` through 2024–2025 never
+appeared on the live site. If the site ever stops updating, check the Actions tab
+first, not the branch.
+
+The workflow copies the tree as-is (no build) and excludes `.git`, `.github` and
+this file. The stale al-folio workflow on the `master` branch is unrelated and
+only fires on pushes to `master`.
 
 Custom domain **onkar.sadekar.net** is configured in the repo's GitHub Pages
 settings, not by a `CNAME` file in the tree. **Do not create a `CNAME` file** and
