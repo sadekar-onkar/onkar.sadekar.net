@@ -115,6 +115,8 @@ progressive enhancement — with JS off, the full list still renders.
   anthropology") is attributed to UZH on `talks.html`; the source CV does not
   name the institution. Confirm.
 - The **peer review** card on `talks.html` is generic — name the actual journals.
+- The **CEU Best Dissertation Award** wording was reconstructed from a 2026 payment
+  form (three recipients, EUR 1,500). Check CEU's official name for the award.
 - `assets/pdf/Onkar_Sadekar_CV.pdf` is the May 2026 version and does not include
   the June 2026 NBA preprint.
 - The portrait is from 2022.
