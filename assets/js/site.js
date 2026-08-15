@@ -7,8 +7,13 @@
   'use strict';
 
   var root = document.documentElement;
-  var STORE_THEME = 'os-theme';
-  var STORE_PALETTE = 'os-palette';
+  /* v2 keys. The v1 build wrote the theme on every page load, which pinned
+     whichever mode the OS happened to be in on a visitor's first visit and
+     then ignored the OS forever after. Renaming the key retires those bad
+     values so everyone goes back to following the OS until they actually
+     click the toggle. Only an explicit click writes to storage now. */
+  var STORE_THEME = 'theme-v2';
+  var STORE_PALETTE = 'palette-v2';
 
   var PALETTES = [
     { id: 'citrus', name: 'Ink & citrus', dots: ['#c04319', '#0f6f68', '#8a6410'] },
@@ -31,15 +36,30 @@
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   }
 
-  function setTheme(theme) {
+  /* persist === false is used to reflect the OS preference without recording
+     it as a deliberate choice. */
+  function setTheme(theme, persist) {
     root.setAttribute('data-theme', theme);
-    store(STORE_THEME, theme);
-    var btn = document.querySelector('[data-theme-toggle]');
-    if (btn) {
-      btn.setAttribute('aria-label',
-        theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
-    }
+    if (persist !== false) store(STORE_THEME, theme);
+    syncThemeButton(theme);
     window.dispatchEvent(new CustomEvent('themechange', { detail: { theme: theme } }));
+  }
+
+  function syncThemeButton(theme) {
+    var btn = document.querySelector('[data-theme-toggle]');
+    if (!btn) return;
+    var dark = theme === 'dark';
+    btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+    btn.setAttribute('title', dark ? 'Switch to light mode' : 'Switch to dark mode');
+    // sun when we are light (click => dark), moon when we are dark
+    btn.innerHTML = dark
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a7 7 0 0 0 10.7 10.7Z"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+        'stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/>' +
+        '<path d="M12 2.6v2M12 19.4v2M2.6 12h2M19.4 12h2M5.4 5.4l1.4 1.4M17.2 17.2l1.4 1.4' +
+        'M18.6 5.4l-1.4 1.4M6.8 17.2l-1.4 1.4"/></svg>';
   }
 
   /* --- palette ----------------------------------------------------------- */
@@ -86,19 +106,19 @@
   document.addEventListener('DOMContentLoaded', function () {
     root.classList.remove('no-js');
 
-    // theme toggle
+    // theme toggle — only a click is treated as a deliberate choice
     var themeBtn = document.querySelector('[data-theme-toggle]');
     if (themeBtn) {
       themeBtn.addEventListener('click', function () {
         setTheme(currentTheme() === 'dark' ? 'light' : 'dark');
       });
-      setTheme(currentTheme());
+      syncThemeButton(currentTheme());
     }
 
-    // follow the OS unless the visitor has made an explicit choice
+    // keep following the OS until the visitor has clicked the toggle
     var mq = window.matchMedia('(prefers-color-scheme: dark)');
     var onChange = function (e) {
-      if (!read(STORE_THEME)) root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      if (!read(STORE_THEME)) setTheme(e.matches ? 'dark' : 'light', false);
     };
     if (mq.addEventListener) mq.addEventListener('change', onChange);
 
@@ -177,6 +197,10 @@
             var show = tag === 'all' || tags.indexOf(tag) !== -1;
             item.hidden = !show;
             if (show) shown++;
+          });
+          // a year heading with nothing left under it should go too
+          document.querySelectorAll('.pub-year').forEach(function (group) {
+            group.hidden = !group.querySelector('.pub:not([hidden])');
           });
           if (count) {
             count.textContent = shown + (shown === 1 ? ' paper' : ' papers');

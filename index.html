@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="assets/css/site.css">
 <script>
 /* Apply the saved theme + palette before first paint (no flash of wrong colours). */
-(function(){try{var t=localStorage.getItem('os-theme'),p=localStorage.getItem('os-palette');
+(function(){try{var t=localStorage.getItem('theme-v2'),p=localStorage.getItem('palette-v2');
 document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
 if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
 </script>
@@ -53,7 +53,8 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
       <li><a href="index.html" aria-current="page">Home</a></li>
       <li><a href="research.html">Research</a></li>
       <li><a href="publications.html">Publications</a></li>
-      <li><a href="talks.html">Talks &amp; teaching</a></li>
+      <li><a href="collaborators.html">Collaborators</a></li>
+      <li><a href="talks.html">Talks</a></li>
       <li><a href="code.html">Code</a></li>
       <li><a href="cv.html">CV</a></li>
     </ul>
@@ -84,6 +85,10 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
 
   <!-- ============================ HERO ============================ -->
   <section class="hero">
+    <!-- quiet network drifting behind the hero; decorative only -->
+    <div class="hero-bg" data-network="ambient" aria-hidden="true">
+      <canvas></canvas>
+    </div>
     <div class="wrap">
       <div class="hero-grid">
         <div>
@@ -116,18 +121,6 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
         </figure>
       </div>
 
-      <!-- the network figure: mode picked at random per visit -->
-      <figure class="netfig" data-network>
-        <canvas role="img" aria-label="An interactive network visualisation. Drag the nodes to reshape it."></canvas>
-        <div class="netfig-tip" data-net-tip></div>
-        <figcaption class="netfig-bar">
-          <p class="netfig-caption" data-net-caption>A network.</p>
-          <button class="netfig-btn" type="button" data-net-shuffle>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
-            another view
-          </button>
-        </figcaption>
-      </figure>
     </div>
   </section>
 
@@ -165,13 +158,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
         </div>
 
         <div>
-          <div class="stats reveal">
-            <div class="stat"><b>12</b><span>Papers</span></div>
-            <div class="stat"><b>470+</b><span>Citations</span></div>
-            <div class="stat"><b>9</b><span>h-index</span></div>
-          </div>
-
-          <div class="rows" style="margin-top:1.75rem">
+          <div class="rows">
             <div class="row">
               <div class="row-key">2025&ndash;</div>
               <div class="row-val">

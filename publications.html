@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="assets/css/site.css">
 <script>
 /* Apply the saved theme + palette before first paint (no flash of wrong colours). */
-(function(){try{var t=localStorage.getItem('os-theme'),p=localStorage.getItem('os-palette');
+(function(){try{var t=localStorage.getItem('theme-v2'),p=localStorage.getItem('palette-v2');
 document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
 if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
 </script>
@@ -42,7 +42,8 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
       <li><a href="index.html">Home</a></li>
       <li><a href="research.html">Research</a></li>
       <li><a href="publications.html" aria-current="page">Publications</a></li>
-      <li><a href="talks.html">Talks &amp; teaching</a></li>
+      <li><a href="collaborators.html">Collaborators</a></li>
+      <li><a href="talks.html">Talks</a></li>
       <li><a href="code.html">Code</a></li>
       <li><a href="cv.html">CV</a></li>
     </ul>
@@ -74,7 +75,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
     <div class="wrap">
       <p class="eyebrow">Peer-reviewed &amp; preprints</p>
       <h1>Publications</h1>
-      <p class="lede">Twelve papers and counting, across network science, evolutionary game theory, anthropology and statistical physics. Everything here is also on <a href="https://scholar.google.com/citations?user=wRgJdSoAAAAJ">Google Scholar</a>.</p>
+      <p class="lede">Ten peer-reviewed papers, plus preprints and work in progress, across network science, evolutionary game theory, anthropology and statistical physics. Everything here is also on <a href="https://scholar.google.com/citations?user=wRgJdSoAAAAJ">Google Scholar</a>.</p>
       <div class="wash" aria-hidden="true">
           <svg viewBox="0 0 320 200" fill="none">
             <g stroke="currentColor" stroke-width="1" opacity="0.35">
@@ -99,7 +100,17 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
   <section class="section">
     <div class="wrap">
 
-      <div class="pub-toolbar">
+      <!-- Bipartite graph of papers and the concepts they use. Built by
+           reading the .pub entries below, so it needs no separate data. -->
+      <figure class="netfig" data-network="papers">
+        <canvas role="img" aria-label="A network of papers and the concepts they share."></canvas>
+        <div class="netfig-tip" data-net-tip></div>
+        <figcaption class="netfig-bar">
+          <p class="netfig-caption" data-net-caption></p>
+        </figcaption>
+      </figure>
+
+      <div class="pub-toolbar" style="margin-top:2.5rem">
         <span class="label">Filter</span>
         <button class="filter" type="button" data-filter="all" aria-pressed="true">All</button>
         <button class="filter" type="button" data-filter="higher-order" aria-pressed="false">Higher-order networks</button>
@@ -110,10 +121,9 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
         <span class="mono" style="margin-left:auto; color:var(--ink-2)" data-pub-count>14 papers</span>
       </div>
 
-      <h2 style="font-size:1.15rem; margin-bottom:0.5rem">Preprints &amp; in preparation</h2>
-      <ol class="pub-list" style="margin-bottom:3rem">
-        <li class="pub" data-tags="applied">
-          <div class="pub-num">2026</div>
+      <h2 class="pub-section-head">Preprints &amp; in preparation</h2>
+      <ol class="pub-list pub-list--flush">
+        <li class="pub" data-tags="applied" data-concepts="empirical-data sports collective-behaviour">
           <div>
             <h3 class="pub-title"><a href="https://arxiv.org/abs/2606.27957">From streaks to synergies: a multi-scale analysis of performance and scoring in the NBA</a><span class="pub-badge">preprint</span></h3>
             <p class="pub-authors">M. Bozhidarova, Y. Cai, R. M. S. Carvalho, D. Cirulli, Q. Dehaene, M. Diaz, A. Krasnokutskaya, B. Pereira, <span class="me">O. Sadekar</span>, F. Battiston</p>
@@ -121,8 +131,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://arxiv.org/abs/2606.27957">arXiv</a></div>
           </div>
         </li>
-        <li class="pub" data-tags="higher-order">
-          <div class="pub-num">2026</div>
+        <li class="pub" data-tags="higher-order" data-concepts="higher-order evolutionary-games public-goods cooperation">
           <div>
             <h3 class="pub-title"><a href="https://arxiv.org/abs/2604.07228">Emergence of cooperation in nonlinear higher-order public goods games</a><span class="pub-badge">preprint</span></h3>
             <p class="pub-authors">J. Llabr&eacute;s, <span class="me">O. Sadekar</span>, F. Malizia, F. Battiston</p>
@@ -130,8 +139,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://arxiv.org/abs/2604.07228">arXiv</a></div>
           </div>
         </li>
-        <li class="pub" data-tags="higher-order">
-          <div class="pub-num">&mdash;</div>
+        <li class="pub" data-tags="higher-order" data-concepts="higher-order evolutionary-games cooperation">
           <div>
             <h3 class="pub-title"><a href="#">Evolutionary dynamics and the emergence of cooperation in higher-order networks</a><span class="pub-badge">in prep</span></h3>
             <p class="pub-authors"><span class="me">O. Sadekar</span>, A. Civilini, C. Hilbe, V. Latora, J. B. Plotkin, F. Battiston</p>
@@ -139,8 +147,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"></div>
           </div>
         </li>
-        <li class="pub" data-tags="higher-order">
-          <div class="pub-num">&mdash;</div>
+        <li class="pub" data-tags="higher-order" data-concepts="higher-order evolutionary-games review">
           <div>
             <h3 class="pub-title"><a href="#">Models of higher-order evolutionary games</a><span class="pub-badge">chapter</span></h3>
             <p class="pub-authors"><span class="me">O. Sadekar</span>, A. Civilini, F. Battiston, V. Latora</p>
@@ -150,10 +157,12 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
         </li>
       </ol>
 
-      <h2 style="font-size:1.15rem; margin-bottom:0.5rem">Peer-reviewed</h2>
-      <ol class="pub-list">
-        <li class="pub" data-tags="collective">
-          <div class="pub-num">2025</div>
+      <h2 class="pub-section-head">Peer-reviewed</h2>
+
+      <section class="pub-year">
+        <h3 class="year-head"><span>2025</span></h3>
+        <ol class="pub-list">
+        <li class="pub" data-tags="collective" data-concepts="higher-order collective-behaviour cooperation review">
           <div>
             <h3 class="pub-title"><a href="https://doi.org/10.1038/s41562-025-02373-5">Higher-order interactions shape collective human behaviour</a></h3>
             <p class="pub-authors">F. Battiston, V. Capraro, F. Karimi, S. Lehmann, A. B. Migliano, <span class="me">O. Sadekar</span>, A. S&aacute;nchez, M. Perc</p>
@@ -161,8 +170,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://doi.org/10.1038/s41562-025-02373-5">DOI</a></div>
           </div>
         </li>
-        <li class="pub" data-tags="higher-order">
-          <div class="pub-num">2025</div>
+        <li class="pub" data-tags="higher-order" data-concepts="higher-order evolutionary-games public-goods cooperation">
           <div>
             <h3 class="pub-title"><a href="https://doi.org/10.1098/rsif.2025.0134">Drivers of cooperation in social dilemmas on higher-order networks</a></h3>
             <p class="pub-authors"><span class="me">O. Sadekar</span>, A. Civilini, V. Latora, F. Battiston</p>
@@ -170,8 +178,13 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://doi.org/10.1098/rsif.2025.0134">DOI</a><a class="pub-link" href="https://arxiv.org/abs/2502.09446">arXiv</a><a class="pub-link" href="https://github.com/sadekar-onkar/overlap-ho-game">code</a></div>
           </div>
         </li>
-        <li class="pub" data-tags="culture">
-          <div class="pub-num">2024</div>
+        </ol>
+      </section>
+
+      <section class="pub-year">
+        <h3 class="year-head"><span>2024</span></h3>
+        <ol class="pub-list">
+        <li class="pub" data-tags="culture" data-concepts="cultural-evolution empirical-data collective-behaviour">
           <div>
             <h3 class="pub-title"><a href="https://doi.org/10.1126/science.adk3381">Population connectivity shapes the distribution and complexity of chimpanzee cumulative culture</a></h3>
             <p class="pub-authors">C. Gunasekaram, F. Battiston, <span class="me">O. Sadekar</span>, C. Padilla-Iglesias, and others</p>
@@ -179,8 +192,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://doi.org/10.1126/science.adk3381">DOI</a></div>
           </div>
         </li>
-        <li class="pub" data-tags="higher-order">
-          <div class="pub-num">2024</div>
+        <li class="pub" data-tags="higher-order" data-concepts="higher-order evolutionary-games cooperation">
           <div>
             <h3 class="pub-title"><a href="https://doi.org/10.1103/PhysRevE.110.014306">Evolutionary game selection creates cooperative environments</a></h3>
             <p class="pub-authors"><span class="me">O. Sadekar</span>, A. Civilini, J. G&oacute;mez-Garde&ntilde;es, V. Latora, F. Battiston</p>
@@ -188,8 +200,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://doi.org/10.1103/PhysRevE.110.014306">DOI</a><a class="pub-link" href="https://arxiv.org/abs/2311.11128">arXiv</a></div>
           </div>
         </li>
-        <li class="pub" data-tags="applied">
-          <div class="pub-num">2024</div>
+        <li class="pub" data-tags="applied" data-concepts="empirical-data sports collective-behaviour">
           <div>
             <h3 class="pub-title"><a href="https://doi.org/10.1098/rsos.240809">Individual and team performance in cricket</a></h3>
             <p class="pub-authors"><span class="me">O. Sadekar</span>, S. Chowdhary, M. S. Santhanam, F. Battiston</p>
@@ -197,8 +208,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://doi.org/10.1098/rsos.240809">DOI</a><a class="pub-link" href="https://arxiv.org/abs/2401.15161">arXiv</a><a class="pub-link" href="https://github.com/sadekar-onkar/cricket_public">code</a></div>
           </div>
         </li>
-        <li class="pub" data-tags="higher-order">
-          <div class="pub-num">2024</div>
+        <li class="pub" data-tags="higher-order" data-concepts="higher-order evolutionary-games public-goods cooperation">
           <div>
             <h3 class="pub-title"><a href="https://doi.org/10.1103/PhysRevLett.132.167401">Explosive cooperation in social dilemmas on higher-order networks</a></h3>
             <p class="pub-authors">A. Civilini, <span class="me">O. Sadekar</span>, F. Battiston, J. G&oacute;mez-Garde&ntilde;es, V. Latora</p>
@@ -206,8 +216,13 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://doi.org/10.1103/PhysRevLett.132.167401">DOI</a><a class="pub-link" href="https://arxiv.org/abs/2303.11475">arXiv</a></div>
           </div>
         </li>
-        <li class="pub" data-tags="applied">
-          <div class="pub-num">2021</div>
+        </ol>
+      </section>
+
+      <section class="pub-year">
+        <h3 class="year-head"><span>2021</span></h3>
+        <ol class="pub-list">
+        <li class="pub" data-tags="applied" data-concepts="empirical-data epidemics">
           <div>
             <h3 class="pub-title"><a href="https://doi.org/10.18520/cs/v121/i9/1208-1215">An infectious diseases hazard map for India based on mobility and transportation networks</a></h3>
             <p class="pub-authors"><span class="me">O. Sadekar</span>, M. Budamagunta, G. J. Sreejith, S. Jain, M. S. Santhanam</p>
@@ -215,8 +230,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://doi.org/10.18520/cs/v121/i9/1208-1215">DOI</a><a class="pub-link" href="https://arxiv.org/abs/2105.15123">arXiv</a></div>
           </div>
         </li>
-        <li class="pub" data-tags="statphys">
-          <div class="pub-num">2021</div>
+        <li class="pub" data-tags="statphys" data-concepts="nonequilibrium">
           <div>
             <h3 class="pub-title"><a href="https://doi.org/10.1103/PhysRevE.103.022141">Thermodynamic uncertainty relation for energy transport in a transient regime: a model study</a></h3>
             <p class="pub-authors">S. Saryal, <span class="me">O. Sadekar</span>, B. K. Agarwalla</p>
@@ -224,8 +238,13 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://doi.org/10.1103/PhysRevE.103.022141">DOI</a><a class="pub-link" href="https://arxiv.org/abs/2008.08521">arXiv</a></div>
           </div>
         </li>
-        <li class="pub" data-tags="statphys">
-          <div class="pub-num">2020</div>
+        </ol>
+      </section>
+
+      <section class="pub-year">
+        <h3 class="year-head"><span>2020</span></h3>
+        <ol class="pub-list">
+        <li class="pub" data-tags="statphys" data-concepts="stochastic-resetting nonequilibrium">
           <div>
             <h3 class="pub-title"><a href="https://doi.org/10.1103/PhysRevE.102.052129">Active Brownian motion in two dimensions under stochastic resetting</a></h3>
             <p class="pub-authors">V. Kumar, <span class="me">O. Sadekar</span>, U. Basu</p>
@@ -233,8 +252,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://doi.org/10.1103/PhysRevE.102.052129">DOI</a><a class="pub-link" href="https://arxiv.org/abs/2008.03294">arXiv</a></div>
           </div>
         </li>
-        <li class="pub" data-tags="statphys">
-          <div class="pub-num">2020</div>
+        <li class="pub" data-tags="statphys" data-concepts="stochastic-resetting nonequilibrium">
           <div>
             <h3 class="pub-title"><a href="https://doi.org/10.1088/1742-5468/ab9e5e">Zero-current nonequilibrium state in symmetric exclusion process with dichotomous stochastic resetting</a></h3>
             <p class="pub-authors"><span class="me">O. Sadekar</span>, U. Basu</p>
@@ -242,7 +260,9 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
             <div class="pub-links"><a class="pub-link" href="https://doi.org/10.1088/1742-5468/ab9e5e">DOI</a><a class="pub-link" href="https://arxiv.org/abs/2004.00951">arXiv</a></div>
           </div>
         </li>
-      </ol>
+        </ol>
+      </section>
+
     </div>
   </section>
 
@@ -287,6 +307,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
 </footer>
 
 <script src="assets/js/site.js" defer></script>
+<script src="assets/js/network.js" defer></script>
 
 </body>
 </html>

@@ -1,94 +1,47 @@
-/* network.js — the hero visualisation.
-   Four modes, one picked at random per visit; the shuffle button cycles them.
+/* network.js — the network figures.
 
-     simplicial : a hypergraph with filled 2- and 3-faces, cooperation
-                  spreading across group interactions
-     coauthors  : the real co-authorship network, derived from PAPERS
-     papers     : one node per paper, clustered by research theme, clickable
-     abstract   : a generative force-directed graph, different every load
+   Three things live here:
 
-   Plain canvas, no libraries. Colours are read from the CSS custom properties
-   so every palette and light/dark switch is picked up automatically.
-   Honours prefers-reduced-motion and pauses when scrolled out of view. */
+     papers      publications.html — a bipartite graph of papers and the
+                 concepts they use. An edge means "this paper uses this
+                 concept", so the link is labelled rather than inferred.
+     collab      collaborators.html — co-authors around a hub. Clicking a
+                 person filters the list below to the papers you share.
+     ambient     index.html — a quiet graph drifting behind the hero. Purely
+                 decorative, no labels, no interaction.
+
+   IMPORTANT: the papers and collaborator graphs are built by reading the
+   page's own HTML. publications.html and collaborators.html are the single
+   source of truth — there is no data array here to keep in sync. Add a paper
+   to the page and the graph picks it up.
+
+   Plain canvas, no libraries. Colours come from the CSS custom properties, so
+   every palette and light/dark switch is followed automatically. The layout
+   settles and then stops: a static graph is what makes hovering and clicking
+   feel solid, and it keeps the page off the CPU. There is deliberately no
+   cursor-repulsion force — nodes that flee the pointer cannot be clicked. */
 
 (function () {
   'use strict';
 
-  /* ---------------------------------------------------------------- data -- */
-  /* Single source of truth for both graph modes. `a` lists co-authors only
-     (Onkar is implicit). Keep in sync with publications.html. */
-
-  var PAPERS = [
-    { k: 'nhb25',    t: 'Higher-order interactions shape collective human behaviour',
-      v: 'Nat. Hum. Behav.', y: 2025, th: 'collective',
-      a: ['F. Battiston', 'V. Capraro', 'F. Karimi', 'S. Lehmann', 'A. B. Migliano', 'A. Sánchez', 'M. Perc'],
-      u: 'https://doi.org/10.1038/s41562-025-02373-5' },
-    { k: 'rsif25',   t: 'Drivers of cooperation in social dilemmas on higher-order networks',
-      v: 'J. R. Soc. Interface', y: 2025, th: 'higher-order',
-      a: ['A. Civilini', 'V. Latora', 'F. Battiston'],
-      u: 'https://doi.org/10.1098/rsif.2025.0134' },
-    { k: 'sci24',    t: 'Population connectivity shapes chimpanzee cumulative culture',
-      v: 'Science', y: 2024, th: 'culture',
-      a: ['C. Gunasekaram', 'F. Battiston', 'C. Padilla-Iglesias', 'A. B. Migliano'],
-      u: 'https://doi.org/10.1126/science.adk3381' },
-    { k: 'pre24',    t: 'Evolutionary game selection creates cooperative environments',
-      v: 'Phys. Rev. E', y: 2024, th: 'higher-order',
-      a: ['A. Civilini', 'J. Gómez-Gardeñes', 'V. Latora', 'F. Battiston'],
-      u: 'https://doi.org/10.1103/PhysRevE.110.014306' },
-    { k: 'rsos24',   t: 'Individual and team performance in cricket',
-      v: 'R. Soc. Open Sci.', y: 2024, th: 'applied',
-      a: ['S. Chowdhary', 'M. S. Santhanam', 'F. Battiston'],
-      u: 'https://doi.org/10.1098/rsos.240809' },
-    { k: 'prl24',    t: 'Explosive cooperation in social dilemmas on higher-order networks',
-      v: 'Phys. Rev. Lett.', y: 2024, th: 'higher-order',
-      a: ['A. Civilini', 'F. Battiston', 'J. Gómez-Gardeñes', 'V. Latora'],
-      u: 'https://doi.org/10.1103/PhysRevLett.132.167401' },
-    { k: 'cs21',     t: 'An infectious diseases hazard map for India',
-      v: 'Curr. Sci.', y: 2021, th: 'applied',
-      a: ['M. Budamagunta', 'G. J. Sreejith', 'S. Jain', 'M. S. Santhanam'],
-      u: 'https://doi.org/10.18520/cs/v121/i9/1208-1215' },
-    { k: 'pre21',    t: 'Thermodynamic uncertainty relation for energy transport',
-      v: 'Phys. Rev. E', y: 2021, th: 'statphys',
-      a: ['S. Saryal', 'B. K. Agarwalla'],
-      u: 'https://doi.org/10.1103/PhysRevE.103.022141' },
-    { k: 'pre20',    t: 'Active Brownian motion in two dimensions under stochastic resetting',
-      v: 'Phys. Rev. E', y: 2020, th: 'statphys',
-      a: ['V. Kumar', 'U. Basu'],
-      u: 'https://doi.org/10.1103/PhysRevE.102.052129' },
-    { k: 'jstat20',  t: 'Zero-current nonequilibrium state in symmetric exclusion process',
-      v: 'J. Stat. Mech.', y: 2020, th: 'statphys',
-      a: ['U. Basu'],
-      u: 'https://doi.org/10.1088/1742-5468/ab9e5e' },
-    { k: 'nba26',    t: 'From streaks to synergies: performance and scoring in the NBA',
-      v: 'arXiv', y: 2026, th: 'applied',
-      a: ['M. Bozhidarova', 'F. Battiston', 'D. Cirulli', 'B. Pereira'],
-      u: 'https://arxiv.org/abs/2606.27957' },
-    { k: 'pgg26',    t: 'Emergence of cooperation in nonlinear higher-order public goods games',
-      v: 'arXiv', y: 2026, th: 'higher-order',
-      a: ['J. Llabrés', 'F. Malizia', 'F. Battiston'],
-      u: 'https://arxiv.org/abs/2604.07228' }
-  ];
-
-  var THEME_TONE = {
-    'higher-order': 0,   // --a1
-    'collective': 1,     // --a2
-    'culture': 2,        // --a3
-    'statphys': 3,       // --ink-2
-    'applied': 4         // --a4
-  };
-
-  var THEME_LABEL = {
+  var CONCEPT_LABEL = {
     'higher-order': 'Higher-order networks',
-    'collective': 'Collective behaviour',
-    'culture': 'Cultural evolution',
-    'statphys': 'Statistical physics',
-    'applied': 'Applied network science'
+    'evolutionary-games': 'Evolutionary game theory',
+    'public-goods': 'Public goods games',
+    'cooperation': 'Cooperation',
+    'collective-behaviour': 'Collective behaviour',
+    'cultural-evolution': 'Cultural evolution',
+    'empirical-data': 'Empirical data',
+    'sports': 'Sports analytics',
+    'epidemics': 'Epidemic spreading',
+    'stochastic-resetting': 'Stochastic resetting',
+    'nonequilibrium': 'Nonequilibrium physics',
+    'review': 'Review & synthesis'
   };
 
   /* ------------------------------------------------------------- helpers -- */
 
   function rnd(a, b) { return a + Math.random() * (b - a); }
-  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
   function readColours() {
     var s = getComputedStyle(document.documentElement);
@@ -103,7 +56,7 @@
     };
   }
 
-  /* Convert any CSS colour to rgba() with the given alpha, via canvas. */
+  /* Any CSS colour -> rgba() at the given alpha, resolved via canvas. */
   var _probe = document.createElement('canvas').getContext('2d');
   function alpha(colour, a) {
     _probe.fillStyle = '#000';
@@ -116,251 +69,178 @@
     return c.replace(/^rgb\(/, 'rgba(').replace(/\)$/, ',' + a + ')');
   }
 
-  /* --------------------------------------------------------- graph build -- */
-
-  function buildSimplicial() {
-    /* A triangulated patch — a genuine simplicial complex rather than a random
-       hairball. Build a triangular lattice, read its triangles off the
-       adjacency, then promote a subset of them to filled group interactions. */
-    var widths = [4, 5, 6, 5, 4];
-    var nodes = [], links = [], faces = [], rowsIdx = [], adj = {};
-
-    widths.forEach(function (w, r) {
-      var row = [];
-      for (var i = 0; i < w; i++) {
-        row.push(nodes.length);
-        nodes.push({
-          x: (i - (w - 1) / 2) * 0.34 + rnd(-0.04, 0.04),
-          y: (r - (widths.length - 1) / 2) * 0.42 + rnd(-0.04, 0.04),
-          vx: 0, vy: 0, r: 5.4, tone: 0, state: 0
-        });
-      }
-      rowsIdx.push(row);
-    });
-
-    function link(a, b) {
-      if (a === undefined || b === undefined) return;
-      var key = Math.min(a, b) + '-' + Math.max(a, b);
-      if (adj[key]) return;
-      adj[key] = 1;
-      links.push({ a: a, b: b, len: 74 });
-    }
-
-    // horizontal bonds
-    rowsIdx.forEach(function (row) {
-      for (var i = 0; i < row.length - 1; i++) link(row[i], row[i + 1]);
-    });
-    // bonds between neighbouring rows, respecting the expand/contract offset
-    for (var r = 0; r < rowsIdx.length - 1; r++) {
-      var a = rowsIdx[r], b = rowsIdx[r + 1];
-      var growing = b.length > a.length;
-      for (var i = 0; i < a.length; i++) {
-        if (growing) { link(a[i], b[i]); link(a[i], b[i + 1]); }
-        else { link(a[i], b[i - 1]); link(a[i], b[i]); }
-      }
-    }
-
-    // every triangle in the lattice
-    var isAdj = function (x, y) { return !!adj[Math.min(x, y) + '-' + Math.max(x, y)]; };
-    var tris = [];
-    for (var p = 0; p < nodes.length; p++) {
-      for (var q = p + 1; q < nodes.length; q++) {
-        if (!isAdj(p, q)) continue;
-        for (var s = q + 1; s < nodes.length; s++) {
-          if (isAdj(p, s) && isAdj(q, s)) tris.push([p, q, s]);
-        }
-      }
-    }
-
-    // promote roughly half of them to group interactions
-    tris.sort(function () { return Math.random() - 0.5; });
-    var take = Math.round(tris.length * 0.45);
-    for (var t = 0; t < take; t++) faces.push({ n: tris[t], tone: t % 3 });
-
-    // merge two adjacent triangles into one 4-body face for variety
-    for (t = 0; t < faces.length - 1 && faces.length > 2; t++) {
-      var shared = faces[t].n.filter(function (v) { return faces[t + 1].n.indexOf(v) !== -1; });
-      if (shared.length === 2) {
-        var union = faces[t].n.concat(faces[t + 1].n.filter(function (v) {
-          return faces[t].n.indexOf(v) === -1;
-        }));
-        faces.splice(t, 2, { n: union, tone: faces[t].tone });
-        break;
-      }
-    }
-
-    nodes[Math.floor(rnd(0, nodes.length))].state = 1;
-    return {
-      nodes: nodes, links: links, faces: faces, dynamic: true,
-      caption: '<b>Higher-order interactions.</b> Shaded faces are 3- and 4-body group interactions, not just pairs. Cooperation spreads through the groups.'
-    };
+  function truncate(s, n) {
+    return s.length > n ? s.slice(0, n - 1).replace(/[\s,;:]+$/, '') + '…' : s;
   }
 
-  function buildCoauthors() {
-    var counts = {}, pairs = {};
-    PAPERS.forEach(function (p) {
-      p.a.forEach(function (name) {
-        counts[name] = (counts[name] || 0) + 1;
-        p.a.forEach(function (other) {
-          if (other <= name) return;
-          var key = name + '||' + other;
-          pairs[key] = (pairs[key] || 0) + 1;
-        });
-      });
-    });
-
-    var names = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
-    var nodes = [{ x: 0, y: 0, vx: 0, vy: 0, r: 11, tone: 0, label: 'Onkar Sadekar',
-                   sub: String(PAPERS.length) + ' papers', hub: true }];
-    var index = {};
-    names.forEach(function (name, i) {
-      index[name] = nodes.length;
-      var n = counts[name];
-      nodes.push({
-        x: Math.cos(i / names.length * 6.283) * rnd(0.5, 1),
-        y: Math.sin(i / names.length * 6.283) * rnd(0.5, 1),
-        vx: 0, vy: 0,
-        r: 4.5 + Math.min(n, 8) * 0.95,
-        tone: n >= 5 ? 0 : n >= 2 ? 1 : 3,
-        label: name,
-        sub: n + (n === 1 ? ' paper' : ' papers') + ' together'
-      });
-    });
-
-    var links = [];
-    names.forEach(function (name) {
-      links.push({ a: 0, b: index[name], len: 74 + (8 - Math.min(counts[name], 8)) * 9,
-                   w: 0.8 + Math.min(counts[name], 8) * 0.35 });
-    });
-    Object.keys(pairs).forEach(function (key) {
-      var ab = key.split('||');
-      links.push({ a: index[ab[0]], b: index[ab[1]], len: 92, w: 0.5 + pairs[key] * 0.3,
-                   faint: true, k: 0.45 });
-    });
-
-    return {
-      nodes: nodes, links: links, faces: [], labels: true,
-      caption: '<b>Who I work with.</b> Every node is a co-author, sized by how many papers we share. Hover to see who.'
-    };
-  }
+  /* --------------------------------------------------- papers x concepts -- */
 
   function buildPapers() {
-    var themes = {};
-    PAPERS.forEach(function (p) { themes[p.th] = 1; });
-    var order = Object.keys(themes);
+    var pubs = [].slice.call(document.querySelectorAll('.pub[data-concepts]'));
+    if (!pubs.length) return null;
 
-    var nodes = PAPERS.map(function (p, i) {
-      var ang = order.indexOf(p.th) / order.length * 6.283;
-      return {
-        x: Math.cos(ang) * 0.75 + rnd(-0.18, 0.18),
-        y: Math.sin(ang) * 0.75 + rnd(-0.18, 0.18),
-        vx: 0, vy: 0,
-        r: 6 + (p.y - 2019) * 0.75,
-        tone: THEME_TONE[p.th],
-        label: p.t,
-        sub: p.v + ' · ' + p.y,
-        href: p.u,
-        theme: p.th
-      };
+    var nodes = [], links = [], conceptIndex = {}, order = [];
+
+    // concept nodes first, so they keep stable tones
+    pubs.forEach(function (el) {
+      (el.dataset.concepts || '').split(/\s+/).forEach(function (c) {
+        if (c && !(c in conceptIndex)) { conceptIndex[c] = -1; order.push(c); }
+      });
+    });
+    order.forEach(function (c, i) {
+      conceptIndex[c] = nodes.length;
+      nodes.push({
+        x: Math.cos(i / order.length * 6.283) * 0.55,
+        y: Math.sin(i / order.length * 6.283) * 0.55,
+        vx: 0, vy: 0, r: 0, tone: i % 5,
+        kind: 'concept', key: c,
+        label: CONCEPT_LABEL[c] || c, degree: 0
+      });
     });
 
-    var links = [];
-    for (var i = 0; i < PAPERS.length; i++) {
-      for (var j = i + 1; j < PAPERS.length; j++) {
-        var shared = PAPERS[i].a.filter(function (x) { return PAPERS[j].a.indexOf(x) !== -1; }).length;
-        var same = PAPERS[i].th === PAPERS[j].th;
-        if (!shared && !same) continue;
-        links.push({ a: i, b: j, len: same ? 52 : 150, w: same ? 1.6 : 0.7,
-                     faint: !same, k: same ? 1 : 0.3 });
-      }
-    }
+    pubs.forEach(function (el, i) {
+      var a = el.querySelector('.pub-title a');
+      var venue = el.querySelector('.pub-venue');
+      var cs = (el.dataset.concepts || '').split(/\s+/).filter(Boolean);
+      var idx = nodes.length;
+      nodes.push({
+        x: Math.cos(i / pubs.length * 6.283) * 1.0 + rnd(-0.1, 0.1),
+        y: Math.sin(i / pubs.length * 6.283) * 1.0 + rnd(-0.1, 0.1),
+        vx: 0, vy: 0, r: 5.5,
+        kind: 'paper',
+        label: truncate((a ? a.textContent : '').trim(), 64),
+        sub: venue ? venue.textContent.trim() : '',
+        href: a ? a.getAttribute('href') : null,
+        el: el,
+        tone: cs.length ? nodes[conceptIndex[cs[0]]].tone : 3
+      });
+      cs.forEach(function (c) {
+        var ci = conceptIndex[c];
+        nodes[ci].degree++;
+        links.push({ a: ci, b: idx, len: 64, w: 1.1, concept: c });
+      });
+    });
 
-    var TONE_VAR = ['--a1', '--a2', '--a3', '--ink-2', '--a4'];
-    var legend = order.map(function (th) {
-      return '<span style="white-space:nowrap"><span style="display:inline-block;width:8px;height:8px;' +
-        'border-radius:50%;background:var(' + TONE_VAR[THEME_TONE[th]] +
-        ');margin-right:0.3em;vertical-align:0.02em"></span>' + THEME_LABEL[th] + '</span>';
-    }).join('&nbsp;&nbsp; ');
+    // concept nodes are sized by how many papers hang off them
+    nodes.forEach(function (n) {
+      if (n.kind === 'concept') {
+        n.r = 6 + Math.min(n.degree, 8) * 1.5;
+        n.sub = n.degree + (n.degree === 1 ? ' paper' : ' papers');
+      }
+    });
 
     return {
-      nodes: nodes, links: links, faces: [], labels: true, clickable: true,
-      caption: '<b>My papers as a network.</b> Nodes are papers, linked when they share authors or a topic &mdash; click one to read it.<br>' +
-        '<span style="font-size:0.94em">' + legend + '</span>'
+      nodes: nodes, links: links,
+      labelConcepts: true,
+      caption: '<b>Papers and the ideas they share.</b> Large nodes are concepts, small ones are papers; ' +
+               'an edge means the paper uses that concept. Hover to follow one, click a paper to read it.'
     };
   }
 
-  function buildAbstract() {
-    /* Communities are given an explicit home to settle around. Letting them
-       emerge from the forces alone is unreliable in a wide, short canvas —
-       they smear across it and the modular structure stops reading. */
-    var groups = 4 + Math.floor(rnd(0, 2));
-    var nodes = [], links = [];
+  /* -------------------------------------------------------- collaborators -- */
+
+  function buildCollab() {
+    var people = [].slice.call(document.querySelectorAll('.collab[data-person]'));
+    if (!people.length) return null;
+
+    var me = document.querySelector('[data-hub-name]');
+    var hubName = me ? me.getAttribute('data-hub-name') : 'Onkar Sadekar';
+
+    var nodes = [{
+      x: 0, y: 0, vx: 0, vy: 0, r: 12, tone: 0, hub: true,
+      kind: 'hub', label: hubName
+    }];
+    var links = [], byPaper = {};
+
+    people.forEach(function (el, i) {
+      var count = el.querySelectorAll('.collab-papers li').length;
+      var papers = [].slice.call(el.querySelectorAll('.collab-papers li')).map(function (li) {
+        return (li.textContent || '').trim();
+      });
+      var idx = nodes.length;
+      nodes.push({
+        x: Math.cos(i / people.length * 6.283) * rnd(0.7, 1),
+        y: Math.sin(i / people.length * 6.283) * rnd(0.7, 1),
+        vx: 0, vy: 0,
+        r: 4.5 + Math.min(count, 8) * 1.05,
+        tone: count >= 5 ? 0 : count >= 2 ? 1 : 3,
+        kind: 'person',
+        label: el.dataset.person,
+        sub: count + (count === 1 ? ' paper' : ' papers') + ' together',
+        el: el,
+        href: el.dataset.url || null
+      });
+      links.push({ a: 0, b: idx, len: 72 + (8 - Math.min(count, 8)) * 8,
+                   w: 0.8 + Math.min(count, 8) * 0.32 });
+      papers.forEach(function (t) { (byPaper[t] = byPaper[t] || []).push(idx); });
+    });
+
+    // two people are linked when they appear on the same paper
+    Object.keys(byPaper).forEach(function (t) {
+      var group = byPaper[t];
+      for (var i = 0; i < group.length; i++) {
+        for (var j = i + 1; j < group.length; j++) {
+          links.push({ a: group[i], b: group[j], len: 88, w: 0.6, faint: true, k: 0.4 });
+        }
+      }
+    });
+
+    return {
+      nodes: nodes, links: links, labelHub: true, selectable: true,
+      caption: '<b>Who I work with.</b> Each node is a co-author, sized by how many papers we share. ' +
+               'Click one to see those papers.'
+    };
+  }
+
+  /* -------------------------------------------------------------- ambient -- */
+
+  function buildAmbient() {
+    var groups = 4, nodes = [], links = [];
     for (var g = 0; g < groups; g++) {
-      var ang = (g / groups) * 6.283 + rnd(-0.25, 0.25);
-      var per = 5 + Math.floor(rnd(0, 4));
-      var hx = 0.5 + Math.cos(ang) * 0.34;
-      var hy = 0.5 + Math.sin(ang) * 0.32;
+      var ang = (g / groups) * 6.283 + rnd(-0.3, 0.3);
+      var per = 4 + Math.floor(rnd(0, 3));
+      var hx = 0.5 + Math.cos(ang) * 0.33;
+      var hy = 0.5 + Math.sin(ang) * 0.3;
       var base = nodes.length;
       for (var i = 0; i < per; i++) {
-        // each node gets its own slot on a small ring around the community
-        // centre, so the module holds its shape instead of being blown open
         var a2 = (i / per) * 6.283 + rnd(-0.3, 0.3);
-        var nx = hx + Math.cos(a2) * rnd(0.035, 0.075);
-        var ny = hy + Math.sin(a2) * rnd(0.07, 0.15);
-        nodes.push({
-          x: (nx - 0.5) * 2,
-          y: (ny - 0.5) * 2,
-          vx: 0, vy: 0, r: rnd(3.5, 7.5), tone: g % 5,
-          hx: nx, hy: ny
-        });
+        var nx = hx + Math.cos(a2) * rnd(0.04, 0.09);
+        var ny = hy + Math.sin(a2) * rnd(0.08, 0.16);
+        nodes.push({ x: (nx - 0.5) * 2, y: (ny - 0.5) * 2, vx: 0, vy: 0,
+                     r: rnd(2.5, 5), tone: g % 5, hx: nx, hy: ny });
       }
-      // dense inside the community, so it reads as a module
       for (i = 0; i < per; i++) {
         for (var j = i + 1; j < per; j++) {
-          if (Math.random() < 0.46) links.push({ a: base + i, b: base + j, len: 46 });
+          if (Math.random() < 0.5) links.push({ a: base + i, b: base + j, len: 40 });
         }
       }
-      // a couple of long, weak bridges to an earlier community
       if (g > 0) {
-        for (var b = 0; b < 2; b++) {
-          links.push({
-            a: base + Math.floor(rnd(0, per)),
-            b: Math.floor(rnd(0, base)),
-            len: 120, faint: true, k: 0.12
-          });
-        }
+        links.push({ a: base + Math.floor(rnd(0, per)), b: Math.floor(rnd(0, base)),
+                     len: 130, faint: true, k: 0.12 });
       }
     }
-    return {
-      nodes: nodes, links: links, faces: [], drift: true, rep: 0.15,
-      caption: '<b>A network, freshly grown.</b> Modular structure, seeded at random — reload for a different one.'
-    };
+    return { nodes: nodes, links: links, ambient: true, rep: 0.18 };
   }
 
-  var MODES = {
-    simplicial: buildSimplicial,
-    coauthors: buildCoauthors,
-    papers: buildPapers,
-    abstract: buildAbstract
-  };
-  var MODE_KEYS = Object.keys(MODES);
+  var MODES = { papers: buildPapers, collab: buildCollab, ambient: buildAmbient };
 
   /* ------------------------------------------------------------- runtime -- */
 
   function init(figure) {
     var canvas = figure.querySelector('canvas');
-    var captionEl = figure.querySelector('[data-net-caption]');
-    var shuffleBtn = figure.querySelector('[data-net-shuffle]');
-    var tip = figure.querySelector('[data-net-tip]');
     if (!canvas) return;
+
+    var mode = figure.dataset.network || 'ambient';
+    var captionEl = figure.querySelector('[data-net-caption]');
+    var tip = figure.querySelector('[data-net-tip]');
+    var panel = document.querySelector('[data-collab-panel]');
 
     var ctx = canvas.getContext('2d');
     var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var C = readColours();
     var W = 0, H = 0, dpr = 1;
-    var G = null, modeIdx = 0, raf = null, visible = true, ticks = 0;
-    var pointer = { x: null, y: null, down: false };
-    var dragging = null, hovered = null;
+    var G = null, raf = null, visible = true, ticks = 0;
+    var dragging = null, hovered = null, selected = null;
 
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -371,35 +251,25 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    function load(key) {
-      G = MODES[key]();
-      G.mode = key;
-      // scatter into pixel space around the centre, following the canvas
-      // aspect so a wide banner starts wide rather than as a small disc
+    function load() {
+      G = MODES[mode] ? MODES[mode]() : null;
+      if (!G) { figure.hidden = true; return false; }
       var sx = W * 0.40, sy = H * 0.40;
-      G.nodes.forEach(function (n) {
-        n.x = W / 2 + n.x * sx;
-        n.y = H / 2 + n.y * sy;
-      });
+      G.nodes.forEach(function (n) { n.x = W / 2 + n.x * sx; n.y = H / 2 + n.y * sy; });
       if (G.nodes[0] && G.nodes[0].hub) { G.nodes[0].x = W / 2; G.nodes[0].y = H / 2; }
-      /* Spread the layout to fill whatever canvas we were given. Target
-         spacing is the side of the area each node gets; link lengths and
-         repulsion are scaled to match so a wide canvas fills out instead of
-         leaving the graph marooned in the middle. */
-      var spacing = Math.min(Math.sqrt(W * H / G.nodes.length), H / 3.4);
+      var spacing = Math.min(Math.sqrt(W * H / G.nodes.length), H / 3.2);
       G.scale = Math.max(0.7, Math.min(2.0, spacing / 62));
-      if (captionEl) captionEl.innerHTML = G.caption;
-      figure.setAttribute('data-mode', key);
+      if (captionEl && G.caption) captionEl.innerHTML = G.caption;
       ticks = 0;
-      canvas.style.cursor = G.clickable ? 'pointer' : 'grab';
+      return true;
     }
 
     /* --- physics --- */
     function step() {
       var nodes = G.nodes, links = G.links, i, j, n, m, dx, dy, d, f;
       var S = G.scale || 1, S2 = S * S;
+      var rep = G.rep === undefined ? 1 : G.rep;
 
-      // repulsion
       for (i = 0; i < nodes.length; i++) {
         n = nodes[i];
         for (j = i + 1; j < nodes.length; j++) {
@@ -407,28 +277,27 @@
           dx = m.x - n.x; dy = m.y - n.y;
           d = Math.sqrt(dx * dx + dy * dy) || 0.01;
           if (d > 260 * S) continue;
-          f = (1400 + (n.r + m.r) * 60) * S2 * (G.rep === undefined ? 1 : G.rep) / (d * d);
+          f = (1400 + (n.r + m.r) * 60) * S2 * rep / (d * d);
+          // labelled hubs push each other harder so their captions have room
+          if (n.kind === 'concept' && m.kind === 'concept') f *= 3.2;
           dx /= d; dy /= d;
           n.vx -= dx * f; n.vy -= dy * f;
           m.vx += dx * f; m.vy += dy * f;
         }
       }
 
-      // springs
       for (i = 0; i < links.length; i++) {
         var l = links[i];
         n = nodes[l.a]; m = nodes[l.b];
         dx = m.x - n.x; dy = m.y - n.y;
         d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-        // l.k softens a spring: long bridges should suggest a connection,
-        // not actively shove two communities apart
         f = (d - (l.len || 80) * S) * 0.0055 * (l.k === undefined ? 1 : l.k);
         dx = dx / d * f; dy = dy / d * f;
         n.vx += dx; n.vy += dy;
         m.vx -= dx; m.vy -= dy;
       }
 
-      // gentle pull to centre + pointer repulsion + integrate
+      var energy = 0;
       for (i = 0; i < nodes.length; i++) {
         n = nodes[i];
         if (n.hx !== undefined) {
@@ -439,24 +308,12 @@
           n.vy += (H / 2 - n.y) * 0.0020;
         }
 
-        if (pointer.x !== null && n !== dragging) {
-          dx = n.x - pointer.x; dy = n.y - pointer.y;
-          d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-          if (d < 120) {
-            f = (120 - d) * 0.028;
-            n.vx += dx / d * f; n.vy += dy / d * f;
-          }
-        }
-
-        if (G.drift && ticks % 150 === 0) {
-          n.vx += rnd(-0.12, 0.12); n.vy += rnd(-0.12, 0.12);
-        }
-
         if (n === dragging) { n.vx = 0; n.vy = 0; continue; }
         if (n.hub) { n.vx *= 0.5; n.vy *= 0.5; }
 
         n.vx *= 0.86; n.vy *= 0.86;
         n.x += n.vx; n.y += n.vy;
+        energy += n.vx * n.vx + n.vy * n.vy;
 
         var pad = n.r + 6;
         if (n.x < pad) { n.x = pad; n.vx *= -0.4; }
@@ -464,126 +321,141 @@
         if (n.y < pad) { n.y = pad; n.vy *= -0.4; }
         if (n.y > H - pad) { n.y = H - pad; n.vy *= -0.4; }
       }
-
-      // cooperation contagion over group interactions
-      if (G.dynamic && ticks % 42 === 0) {
-        var changed = [];
-        G.faces.forEach(function (face) {
-          var coop = face.n.filter(function (k) { return nodes[k].state; }).length;
-          if (coop / face.n.length >= 0.5) {
-            face.n.forEach(function (k) { if (!nodes[k].state) changed.push(k); });
-          }
-        });
-        changed.forEach(function (k) { nodes[k].state = 1; });
-        var all = nodes.every(function (x) { return x.state; });
-        if (all || (changed.length === 0 && ticks % 210 === 0)) {
-          nodes.forEach(function (x) { x.state = 0; });
-          nodes[Math.floor(rnd(0, nodes.length))].state = 1;
-        }
-      }
+      return energy;
     }
 
     /* --- drawing --- */
+    function isActive(n) {
+      return n === hovered || n === selected;
+    }
+
     function draw() {
       ctx.clearRect(0, 0, W, H);
       var nodes = G.nodes;
-
-      // faces (group interactions)
-      G.faces.forEach(function (face) {
-        var pts = face.n.map(function (k) { return nodes[k]; });
-        var cx = 0, cy = 0;
-        pts.forEach(function (p) { cx += p.x; cy += p.y; });
-        cx /= pts.length; cy /= pts.length;
-        pts = pts.slice().sort(function (a, b) {
-          return Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx);
+      var focus = hovered || selected;
+      var near = null;
+      if (focus) {
+        near = {};
+        G.links.forEach(function (l) {
+          if (nodes[l.a] === focus) near[l.b] = 1;
+          if (nodes[l.b] === focus) near[l.a] = 1;
         });
-        var lit = pts.filter(function (p) { return p.state; }).length / pts.length;
-        ctx.beginPath();
-        ctx.moveTo(pts[0].x, pts[0].y);
-        for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-        ctx.closePath();
-        ctx.fillStyle = alpha(C.tones[face.tone], 0.07 + lit * 0.17);
-        ctx.fill();
-      });
+      }
 
-      // edges
       G.links.forEach(function (l) {
         var n = nodes[l.a], m = nodes[l.b];
-        var hot = hovered && (n === hovered || m === hovered);
+        var hot = focus && (n === focus || m === focus);
+        var dim = focus && !hot;
         ctx.beginPath();
         ctx.moveTo(n.x, n.y);
         ctx.lineTo(m.x, m.y);
-        ctx.strokeStyle = hot ? alpha(C.tones[hovered.tone], 0.8)
-                              : alpha(C.ink2, l.faint ? 0.22 : 0.45);
-        ctx.lineWidth = hot ? (l.w || 1) + 0.7 : (l.w || 1);
+        ctx.strokeStyle = hot ? alpha(C.tones[focus.tone], 0.85)
+          : alpha(C.ink2, dim ? 0.08 : (l.faint ? 0.2 : (G.ambient ? 0.28 : 0.4)));
+        ctx.lineWidth = hot ? (l.w || 1) + 0.8 : (l.w || 1);
         ctx.stroke();
       });
 
-      // nodes
-      nodes.forEach(function (n) {
+      nodes.forEach(function (n, i) {
         var tone = C.tones[n.tone];
-        var isHot = n === hovered;
-        var filled = !G.dynamic || n.state;
+        var hot = focus && (n === focus || (near && near[i]));
+        var dim = focus && !hot;
 
-        if (isHot) {
+        if (isActive(n)) {
           ctx.beginPath();
-          ctx.arc(n.x, n.y, n.r + 6, 0, 6.284);
-          ctx.fillStyle = alpha(tone, 0.16);
+          ctx.arc(n.x, n.y, n.r + 7, 0, 6.284);
+          ctx.fillStyle = alpha(tone, 0.18);
           ctx.fill();
         }
 
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, 6.284);
-        if (filled) {
-          ctx.fillStyle = tone;
-          ctx.fill();
-        } else {
+        if (n.kind === 'paper') {
+          // papers are hollow so the concept hubs read as the larger structure
           ctx.fillStyle = C.surface;
           ctx.fill();
-          ctx.strokeStyle = alpha(tone, 0.85);
-          ctx.lineWidth = 1.8;
+          ctx.strokeStyle = alpha(tone, dim ? 0.25 : 0.9);
+          ctx.lineWidth = 2;
           ctx.stroke();
+        } else {
+          ctx.fillStyle = dim ? alpha(tone, 0.28) : (G.ambient ? alpha(tone, 0.75) : tone);
+          ctx.fill();
         }
 
         if (n.hub) {
           ctx.beginPath();
-          ctx.arc(n.x, n.y, n.r + 3.5, 0, 6.284);
+          ctx.arc(n.x, n.y, n.r + 4, 0, 6.284);
           ctx.strokeStyle = alpha(tone, 0.45);
           ctx.lineWidth = 1.4;
           ctx.stroke();
         }
       });
 
-      // hub label, always on
-      if (G.labels) {
-        var hub = nodes[0];
-        if (hub && hub.hub) {
-          ctx.font = '600 12px "Space Grotesk", system-ui, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillStyle = C.ink;
-          ctx.fillText(hub.label, hub.x, hub.y + hub.r + 16);
-        }
+      /* Standing labels for the hubs. Labels are placed biggest-first and any
+         that would collide with one already placed is dropped, so the picture
+         never turns into overlapping text. The focused node always wins. */
+      if (G.labelConcepts || G.labelHub) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.font = '600 11.5px "Space Grotesk", system-ui, sans-serif';
+
+        var candidates = nodes.filter(function (n) {
+          return n.kind === 'concept' || n.kind === 'hub';
+        }).sort(function (a, b) {
+          if (a === focus) return -1;
+          if (b === focus) return 1;
+          return b.r - a.r;
+        });
+
+        var boxes = [];
+        candidates.forEach(function (n) {
+          var w = ctx.measureText(n.label).width;
+          var x = Math.min(Math.max(n.x, w / 2 + 6), W - w / 2 - 6);
+          var y = n.y + n.r + 15;
+          if (y > H - 4) y = n.y - n.r - 7;
+          var box = { x0: x - w / 2 - 4, x1: x + w / 2 + 4, y0: y - 11, y1: y + 4 };
+          var clash = boxes.some(function (b) {
+            return !(box.x1 < b.x0 || box.x0 > b.x1 || box.y1 < b.y0 || box.y0 > b.y1);
+          });
+          if (clash && n !== focus) return;
+          boxes.push(box);
+
+          var dim = focus && n !== focus && !(near && near[nodes.indexOf(n)]);
+          // halo in the panel colour keeps text legible where edges cross it
+          ctx.lineWidth = 3.5;
+          ctx.strokeStyle = C.surface;
+          ctx.strokeText(n.label, x, y);
+          ctx.fillStyle = dim ? alpha(C.ink2, 0.45) : C.ink;
+          ctx.fillText(n.label, x, y);
+        });
       }
     }
 
     function frame() {
       if (!visible) { raf = null; return; }
       ticks++;
-      if (!reduced || ticks < 160) step();
+      var energy = step();
       draw();
+      if (!dragging && ticks > 90 && energy < 0.05) { raf = null; return; }
       raf = requestAnimationFrame(frame);
     }
 
     function start() {
+      if (reduced) {
+        for (var i = 0; i < 400; i++) step();
+        draw();
+        return;
+      }
       if (!raf) raf = requestAnimationFrame(frame);
     }
+
+    function repaint() { if (!raf) draw(); }
 
     /* --- interaction --- */
     function nodeAt(x, y) {
       var best = null, bestD = Infinity;
       G.nodes.forEach(function (n) {
         var d = Math.hypot(n.x - x, n.y - y);
-        if (d < n.r + 9 && d < bestD) { best = n; bestD = d; }
+        if (d < n.r + 10 && d < bestD) { best = n; bestD = d; }
       });
       return best;
     }
@@ -593,72 +465,81 @@
       if (!n || !n.label) { tip.setAttribute('data-show', 'false'); return; }
       tip.innerHTML = n.label + (n.sub ? '<span class="tip-sub">' + n.sub + '</span>' : '');
       tip.style.left = n.x + 'px';
-      tip.style.top = n.y - n.r + 'px';
+      tip.style.top = (n.y - n.r) + 'px';
       tip.setAttribute('data-show', 'true');
     }
 
     function localPoint(e) {
       var r = canvas.getBoundingClientRect();
-      var t = e.touches ? e.touches[0] : e;
-      return { x: t.clientX - r.left, y: t.clientY - r.top };
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
     }
 
-    canvas.addEventListener('pointermove', function (e) {
-      var p = localPoint(e);
-      pointer.x = p.x; pointer.y = p.y;
-      if (dragging) {
-        dragging.x = p.x; dragging.y = p.y;
-        return;
+    function selectPerson(n) {
+      selected = n;
+      if (!panel) return;
+      if (!n) { panel.innerHTML = ''; panel.hidden = true; return; }
+      var link = n.href
+        ? ' <a class="pub-link" href="' + n.href + '">profile &#8599;</a>'
+        : '';
+      panel.innerHTML =
+        '<div class="collab-panel-head"><h3>' + n.label + '</h3>' + link +
+        '<button class="netfig-btn" type="button" data-collab-clear>clear</button></div>' +
+        (n.el ? n.el.querySelector('.collab-papers').outerHTML : '');
+      panel.hidden = false;
+      var clear = panel.querySelector('[data-collab-clear]');
+      if (clear) {
+        clear.addEventListener('click', function () { selectPerson(null); repaint(); });
       }
-      var n = nodeAt(p.x, p.y);
-      if (n !== hovered) {
-        hovered = n;
-        showTip(n && n.label ? n : null);
-        canvas.style.cursor = n ? (n.href ? 'pointer' : 'grab') : (G.clickable ? 'pointer' : 'default');
-      } else if (n) {
-        showTip(n.label ? n : null);
-      }
-      start();
-    });
+    }
 
-    canvas.addEventListener('pointerdown', function (e) {
-      var p = localPoint(e);
-      dragging = nodeAt(p.x, p.y);
-      if (dragging) {
-        canvas.setPointerCapture(e.pointerId);
-        dragging.dragStart = { x: p.x, y: p.y };
-      }
-      start();
-    });
-
-    canvas.addEventListener('pointerup', function (e) {
-      if (dragging && dragging.href && dragging.dragStart) {
+    if (!G || !G.ambient) {
+      canvas.addEventListener('pointermove', function (e) {
         var p = localPoint(e);
-        if (Math.hypot(p.x - dragging.dragStart.x, p.y - dragging.dragStart.y) < 5) {
-          window.open(dragging.href, '_blank', 'noopener');
+        if (dragging) { dragging.x = p.x; dragging.y = p.y; start(); return; }
+        var n = nodeAt(p.x, p.y);
+        if (n !== hovered) {
+          hovered = n;
+          showTip(n);
+          canvas.style.cursor = n ? (n.href || G.selectable ? 'pointer' : 'grab') : 'default';
+          repaint();
+        } else if (n) {
+          showTip(n);
         }
-      }
-      dragging = null;
-    });
+      });
 
-    canvas.addEventListener('pointerleave', function () {
-      pointer.x = pointer.y = null;
-      hovered = null; dragging = null;
-      showTip(null);
-    });
+      canvas.addEventListener('pointerdown', function (e) {
+        var p = localPoint(e);
+        dragging = nodeAt(p.x, p.y);
+        if (dragging) {
+          canvas.setPointerCapture(e.pointerId);
+          dragging.dragStart = p;
+          start();
+        }
+      });
 
-    if (shuffleBtn) {
-      shuffleBtn.addEventListener('click', function () {
-        modeIdx = (modeIdx + 1) % MODE_KEYS.length;
-        load(MODE_KEYS[modeIdx]);
+      canvas.addEventListener('pointerup', function (e) {
+        var n = dragging;
+        dragging = null;
+        if (n && n.dragStart) {
+          var p = localPoint(e);
+          var moved = Math.hypot(p.x - n.dragStart.x, p.y - n.dragStart.y);
+          if (moved < 5) {
+            // a click, not a drag
+            if (G.selectable && n.kind === 'person') { selectPerson(n); repaint(); }
+            else if (n.href) { window.open(n.href, '_blank', 'noopener'); }
+          }
+        }
         start();
+      });
+
+      canvas.addEventListener('pointerleave', function () {
+        hovered = null; dragging = null;
+        showTip(null);
+        repaint();
       });
     }
 
-    window.addEventListener('themechange', function () {
-      C = readColours();
-      draw();
-    });
+    window.addEventListener('themechange', function () { C = readColours(); repaint(); });
 
     var ro = new ResizeObserver(function () {
       var prevW = W, prevH = H;
@@ -666,8 +547,8 @@
       if (G && prevW > 0) {
         var sx = W / prevW, sy = H / prevH;
         G.nodes.forEach(function (n) { n.x *= sx; n.y *= sy; });
+        start();
       }
-      if (G) draw();
     });
     ro.observe(canvas);
 
@@ -675,15 +556,11 @@
       new IntersectionObserver(function (entries) {
         visible = entries[0].isIntersecting;
         if (visible) start();
-      }, { threshold: 0.05 }).observe(canvas);
+      }, { threshold: 0.02 }).observe(canvas);
     }
 
     resize();
-    // ?net=papers etc. forces a mode — handy for checking each one
-    var forced = (location.search.match(/[?&]net=([a-z]+)/) || [])[1];
-    modeIdx = MODE_KEYS.indexOf(forced);
-    if (modeIdx < 0) modeIdx = Math.floor(Math.random() * MODE_KEYS.length);
-    load(MODE_KEYS[modeIdx]);
+    if (!load()) return;
     start();
   }
 

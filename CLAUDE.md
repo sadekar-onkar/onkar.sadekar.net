@@ -15,9 +15,10 @@ total) precisely so the site makes no third-party requests.
 ## Stack & layout
 
 ```
-index.html          hero + about + research teaser + selected papers + news
+index.html          hero (ambient network bg) + about + research teaser + news
 research.html       five research themes, each with an inline SVG motif
-publications.html   full list, filterable (filters are progressive enhancement)
+publications.html   papers grouped by year, filterable + papers/concepts graph
+collaborators.html  co-author graph + the full list of people
 talks.html          talks, teaching, service
 code.html           released code & data
 cv.html             structured CV + PDF download
@@ -60,6 +61,12 @@ do not remove `.nojekyll`.
 
 ## Theming
 
+The theme is stored under `theme-v2` / `palette-v2`. The v1 build wrote the
+theme on **every page load**, which pinned whichever mode the visitor's OS was
+in at their first visit and then ignored the OS forever. Only an explicit click
+writes to storage now; renaming the keys retired the bad values. Do not call
+`setTheme()` on load without passing `persist === false`.
+
 Two independent axes, both on `<html>` and both persisted in `localStorage`:
 
 - `data-theme` — `light` | `dark`. Defaults to the OS preference, and keeps
@@ -79,41 +86,59 @@ accent, re-check it.
 An inline script in each `<head>` applies the stored theme before first paint.
 Keep it — removing it reintroduces a flash of the wrong colours.
 
-## The hero network (`assets/js/network.js`)
+## The networks (`assets/js/network.js`)
 
-Four modes, one chosen at random per visit; the "another view" button cycles them:
+Three figures, each chosen by the `data-network` attribute on its container:
 
-- `simplicial` — hypergraph with filled 2- and 3-faces, cooperation spreading
-- `coauthors` — real co-authorship network, derived from `PAPERS`
-- `papers` — one node per paper, clustered by theme, click to open the DOI
-- `abstract` — generative modular graph, different every load
+- `papers` (publications.html) — bipartite: papers and the concepts they use.
+  An edge means "this paper uses this concept".
+- `collab` (collaborators.html) — co-authors around a hub. Clicking a person
+  fills the panel above the list with the papers you share.
+- `ambient` (index.html) — decorative background behind the hero. No labels,
+  no interaction, `pointer-events: none`.
 
-Colours are read from the CSS custom properties at runtime and re-read on the
-`themechange` event, so the viz follows the palette automatically. It honours
-`prefers-reduced-motion` (settles, then stops) and pauses when scrolled out of view.
+**There is no data array in this file.** Both real graphs are built by reading
+the page's own HTML, so `publications.html` and `collaborators.html` are the
+single source of truth. Add a paper to the page and the graph picks it up.
 
-`PAPERS` at the top of that file feeds two of the four modes. **It must be kept in
-sync with `publications.html` by hand.**
+- papers graph reads `.pub[data-concepts]` — the space-separated concept slugs.
+  Add a slug to `CONCEPT_LABEL` at the top of network.js to give it a caption.
+- collaborators graph reads `.collab[data-person]` and the `<li>` items inside
+  its `.collab-papers` list. Add `data-url="…"` to a `.collab` to give that
+  person a profile link in the panel.
 
-Append `?net=simplicial` (or `coauthors`, `papers`, `abstract`) to the homepage
-URL to force a particular mode instead of the random pick — useful when checking
-a change to the visualisation.
+Two things that are deliberate and should not be "fixed":
 
-Layout tuning lives in three places: `G.scale` in `load()` sets the overall
-spacing from the canvas size, per-link `len`/`k` set rest length and stiffness
-(soft `k` lets a long bridge suggest a connection without shoving two clusters
-apart), and per-mode `rep` scales the global repulsion.
+1. **No cursor-repulsion force.** An earlier version pushed nodes away from the
+   pointer. It looked lively and made the graph unusable — nodes fled the
+   cursor, so they could never be hovered or clicked.
+2. **The simulation stops when it settles.** `frame()` returns once kinetic
+   energy drops below a threshold. A static graph is what makes clicking feel
+   solid, and it keeps the page off the CPU. Anything that changes the picture
+   calls `start()` (physics) or `repaint()` (draw only).
+
+Labels are placed largest-first with collision detection; any label that would
+overlap one already placed is dropped, so the figure never turns into
+overlapping text.
+
+Layout tuning: `G.scale` in `load()` sets overall spacing from the canvas size,
+per-link `len`/`k` set rest length and stiffness, per-graph `rep` scales global
+repulsion.
 
 ## Adding a paper
 
-1. `publications.html` — copy an existing `<li class="pub" data-tags="...">`
-   block. `data-tags` must be one of `higher-order`, `collective`, `culture`,
-   `statphys`, `applied` (that is what the filter buttons match).
-2. Update the `data-pub-count` number in the toolbar.
-3. `assets/js/network.js` — add an entry to `PAPERS` so the network modes know
-   about it.
-4. Optionally add it to "Selected papers" on `index.html` and to the relevant
-   theme on `research.html`.
+Everything about a paper lives in **`publications.html`** and nowhere else.
+
+1. Copy an existing `<li class="pub" …>` block into the right
+   `<section class="pub-year">` (or add a new year section — the heading is
+   `<h3 class="year-head"><span>2027</span></h3>`).
+2. `data-tags` drives the filter buttons: one of `higher-order`, `collective`,
+   `culture`, `statphys`, `applied`.
+3. `data-concepts` drives the graph: space-separated slugs from `CONCEPT_LABEL`
+   in network.js.
+4. Update the `data-pub-count` number in the toolbar.
+5. Optionally add it to "Selected papers" on `index.html`, to the relevant theme
+   on `research.html`, and to the people involved in `collaborators.html`.
 
 Publications are hand-written HTML rather than generated from a data file so
 they are indexable and work without JavaScript. The filtering on top is
@@ -131,9 +156,7 @@ progressive enhancement — with JS off, the full list still renders.
   the June 2026 NBA preprint.
 - The portrait is from 2022.
 
-## Planned, not built
+## Not planned
 
-A private area for personal material. Nothing in the current tree anticipates it
-beyond leaving room in the nav. GitHub Pages serves everything publicly, so this
-will need either a separate private host or client-side gating with the clear
-understanding that client-side gating is not real security.
+A private area was discussed and dropped. Do not build one without being asked
+again.
