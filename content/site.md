@@ -41,29 +41,7 @@ contact:
   - {label: GitHub,  icon: github,  url: "https://github.com/sadekar-onkar", text: sadekar-onkar}
   - {label: arXiv,   icon: arxiv,   url: "https://arxiv.org/a/sadekar_o_1", text: Preprints}
 
-# Filter buttons on the publications page. Keys must match `tags:` on a paper.
-tags:
-  higher-order: Higher-order networks
-  collective:   Collective behaviour
-  culture:      Cultural evolution
-  statphys:     Statistical physics
-  applied:      Applied
 
-# Concept vocabulary for the bipartite diagram. Keys must match `concepts:`
-# on a paper. Add a line here and you can start using that concept.
-concepts:
-  higher-order:         Higher-order networks
-  evolutionary-games:   Evolutionary game theory
-  public-goods:         Public goods games
-  cooperation:          Cooperation
-  collective-behaviour: Collective behaviour
-  cultural-evolution:   Cultural evolution
-  empirical-data:       Empirical data
-  sports:               Sports analytics
-  epidemics:            Epidemic spreading
-  stochastic-resetting: Stochastic resetting
-  nonequilibrium:       Nonequilibrium physics
-  review:               Review & synthesis
 
 collab_lede: >-
   Nothing here was done alone. These are the people I have written papers with,

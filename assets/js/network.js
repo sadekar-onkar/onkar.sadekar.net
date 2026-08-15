@@ -59,6 +59,15 @@
 
   /* -------------------------------------------------------- collaborators -- */
 
+  /* Every link here carries a `.paper` ({title, href}) — there is no longer
+     an "aggregate" edge. A person with N shared papers gets N parallel
+     hub-person edges, one per paper; two co-authors on the same paper get
+     one person-person edge for it. draw()/edgeControl() fan parallel edges
+     out with a small perpendicular offset so each stays individually visible
+     and hoverable. All .collab elements are read regardless of whether the
+     "everyone, in full" list hides them (see the data-count='1' CSS rule) —
+     the graph always has every collaborator, only the plain-text list omits
+     one-paper people. */
   function buildCollab() {
     var people = [].slice.call(document.querySelectorAll('.collab[data-person]'));
     if (!people.length) return null;
@@ -73,10 +82,10 @@
     var links = [], byPaper = {};
 
     people.forEach(function (el, i) {
-      var count = el.querySelectorAll('.collab-papers li').length;
       var papers = [].slice.call(el.querySelectorAll('.collab-papers li')).map(function (li) {
-        return (li.textContent || '').trim();
+        return { title: (li.textContent || '').trim(), href: li.dataset.href || null };
       });
+      var count = papers.length;
       var idx = nodes.length;
       nodes.push({
         x: Math.cos(i / people.length * 6.283) * rnd(0.7, 1),
@@ -90,25 +99,44 @@
         el: el,
         href: el.dataset.url || null
       });
-      links.push({ a: 0, b: idx, len: 72 + (8 - Math.min(count, 8)) * 8,
-                   w: 0.8 + Math.min(count, 8) * 0.32 });
-      papers.forEach(function (t) { (byPaper[t] = byPaper[t] || []).push(idx); });
+      var len = 72 + (8 - Math.min(count, 8)) * 8;
+      papers.forEach(function (p, k) {
+        // k divides the spring constant across the fan, so N parallel edges
+        // pull the person about as hard as one edge used to — otherwise a
+        // prolific co-author would get yanked in N times as fast.
+        links.push({ a: 0, b: idx, len: len, w: 1.05, k: 1 / count,
+                     paper: p, fan: k, fanCount: count });
+        (byPaper[p.title] = byPaper[p.title] || []).push({ idx: idx, paper: p });
+      });
     });
 
-    // two people are linked when they appear on the same paper
-    Object.keys(byPaper).forEach(function (t) {
-      var group = byPaper[t];
+    // Two people are linked once per paper they actually share. Group first
+    // by the (a, b) pair across ALL papers — not per paper — so fanCount is
+    // "how many papers do these two specific people share", not "how many
+    // co-authors were on this one paper".
+    var pairs = {};
+    Object.keys(byPaper).forEach(function (title) {
+      var group = byPaper[title];
       for (var i = 0; i < group.length; i++) {
         for (var j = i + 1; j < group.length; j++) {
-          links.push({ a: group[i], b: group[j], len: 88, w: 0.6, faint: true, k: 0.4 });
+          var a = Math.min(group[i].idx, group[j].idx), b = Math.max(group[i].idx, group[j].idx);
+          var key = a + '-' + b;
+          (pairs[key] = pairs[key] || { a: a, b: b, papers: [] }).papers.push(group[i].paper);
         }
       }
+    });
+    Object.keys(pairs).forEach(function (key) {
+      var pair = pairs[key], n = pair.papers.length;
+      pair.papers.forEach(function (p, k) {
+        links.push({ a: pair.a, b: pair.b, len: 88, w: 0.6, faint: true,
+                     k: 0.4 / n, paper: p, fan: k, fanCount: n });
+      });
     });
 
     return {
       nodes: nodes, links: links, labelHub: true, selectable: true,
-      caption: '<b>Who I work with.</b> Each node is a co-author, sized by how many papers we share. ' +
-               'Click one to see those papers.'
+      caption: '<b>Who I work with.</b> Every edge is a shared paper — hover or click one to see ' +
+               'which. Click a person to list everything you share.'
     };
   }
 
@@ -160,7 +188,7 @@
     var C = readColours();
     var W = 0, H = 0, dpr = 1;
     var G = null, raf = null, visible = true, ticks = 0;
-    var dragging = null, hovered = null, selected = null;
+    var dragging = null, hovered = null, selected = null, hoverEdge = null, downPoint = null;
 
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -253,31 +281,37 @@
       var nodes = G.nodes;
       var focus = hovered || selected;
       var near = null;
-      if (focus) {
+      if (focus || hoverEdge) {
         near = {};
-        G.links.forEach(function (l) {
-          if (nodes[l.a] === focus) near[l.b] = 1;
-          if (nodes[l.b] === focus) near[l.a] = 1;
-        });
+        if (focus) {
+          G.links.forEach(function (l) {
+            if (nodes[l.a] === focus) near[l.b] = 1;
+            if (nodes[l.b] === focus) near[l.a] = 1;
+          });
+        }
+        if (hoverEdge) { near[hoverEdge.a] = 1; near[hoverEdge.b] = 1; }
       }
 
       G.links.forEach(function (l) {
         var n = nodes[l.a], m = nodes[l.b];
-        var hot = focus && (n === focus || m === focus);
-        var dim = focus && !hot;
+        var isEdgeHot = l === hoverEdge;
+        var hot = isEdgeHot || (focus && (n === focus || m === focus));
+        var dim = (focus || hoverEdge) && !hot;
+        var ctrl = edgeControl(n, m, l);
         ctx.beginPath();
         ctx.moveTo(n.x, n.y);
-        ctx.lineTo(m.x, m.y);
-        ctx.strokeStyle = hot ? alpha(C.tones[focus.tone], 0.85)
+        ctx.quadraticCurveTo(ctrl.cx, ctrl.cy, m.x, m.y);
+        ctx.strokeStyle = hot
+          ? alpha(C.tones[focus ? focus.tone : n.tone], 0.9)
           : alpha(C.ink2, dim ? 0.08 : (l.faint ? 0.2 : (G.ambient ? 0.28 : 0.4)));
-        ctx.lineWidth = hot ? (l.w || 1) + 0.8 : (l.w || 1);
+        ctx.lineWidth = hot ? (l.w || 1) + 1.1 : (l.w || 1);
         ctx.stroke();
       });
 
       nodes.forEach(function (n, i) {
         var tone = C.tones[n.tone];
-        var hot = focus && (n === focus || (near && near[i]));
-        var dim = focus && !hot;
+        var hot = (focus && n === focus) || (near && near[i]);
+        var dim = (focus || hoverEdge) && !hot;
 
         if (isActive(n)) {
           ctx.beginPath();
@@ -379,13 +413,58 @@
       return best;
     }
 
+    /* Parallel edges between the same two nodes (a person sharing several
+       papers with the hub, or two co-authors sharing several papers) fan out
+       around a perpendicular offset so each one stays visible and separately
+       hoverable, instead of drawing on top of each other. A single edge
+       (fanCount 1) gets offset 0, which collapses the curve back to a
+       straight line — quadraticCurveTo with its control point on the line
+       IS a straight line, so this needs no special case. */
+    function edgeControl(n, m, l) {
+      var fan = l.fan || 0, fanCount = l.fanCount || 1;
+      var mx = (n.x + m.x) / 2, my = (n.y + m.y) / 2;
+      if (fanCount <= 1) return { cx: mx, cy: my };
+      var dx = m.x - n.x, dy = m.y - n.y;
+      var len = Math.hypot(dx, dy) || 1;
+      var nx = -dy / len, ny = dx / len;
+      var step = 7 * (G.scale || 1);
+      var offset = (fan - (fanCount - 1) / 2) * step;
+      return { cx: mx + nx * offset, cy: my + ny * offset };
+    }
+
+    function edgeAt(x, y) {
+      var best = null, bestD = Infinity;
+      G.links.forEach(function (l) {
+        if (!l.paper) return; // only paper-carrying edges are interactive
+        var n = G.nodes[l.a], m = G.nodes[l.b];
+        var ctrl = edgeControl(n, m, l);
+        for (var t = 0; t <= 1.0001; t += 0.1) {
+          var mt = 1 - t;
+          var px = mt * mt * n.x + 2 * mt * t * ctrl.cx + t * t * m.x;
+          var py = mt * mt * n.y + 2 * mt * t * ctrl.cy + t * t * m.y;
+          var d = Math.hypot(px - x, py - y);
+          if (d < bestD) { bestD = d; best = l; }
+        }
+      });
+      return bestD < 7 ? best : null;
+    }
+
     function showTip(n) {
       if (!tip) return;
       if (!n || !n.label) { tip.setAttribute('data-show', 'false'); return; }
       tip.innerHTML = n.label + (n.sub ? '<span class="tip-sub">' + n.sub + '</span>' : '');
-      tip.style.left = n.x + 'px';
-      tip.style.top = (n.y - n.r) + 'px';
       tip.setAttribute('data-show', 'true');
+      // Measure, then clamp so the tip never gets clipped by the figure's
+      // rounded-corner overflow:hidden when a node sits near an edge of the
+      // canvas — this is what "hover doesn't work near the edge" turned out
+      // to be: the highlight was firing fine, only the tooltip was invisible.
+      var tw = tip.offsetWidth, th = tip.offsetHeight, pad = 6;
+      var x = Math.min(Math.max(n.x, tw / 2 + pad), W - tw / 2 - pad);
+      var above = (n.y - (n.r || 0) - th - 10) >= pad;
+      tip.classList.toggle('tip-below', !above);
+      var y = above ? (n.y - (n.r || 0)) : Math.min(n.y + (n.r || 0) + 4, H - th - pad);
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
     }
 
     function localPoint(e) {
@@ -411,18 +490,31 @@
       }
     }
 
+    function tipForEdge(edge) {
+      var ctrl = edgeControl(G.nodes[edge.a], G.nodes[edge.b], edge);
+      return { x: ctrl.cx, y: ctrl.cy, r: 0, label: edge.paper.title,
+               sub: edge.paper.href ? 'Click to open' : '' };
+    }
+
     if (!G || !G.ambient) {
       canvas.addEventListener('pointermove', function (e) {
         var p = localPoint(e);
         if (dragging) { dragging.x = p.x; dragging.y = p.y; start(); return; }
         var n = nodeAt(p.x, p.y);
-        if (n !== hovered) {
+        var edge = n ? null : edgeAt(p.x, p.y);
+        if (n !== hovered || edge !== hoverEdge) {
           hovered = n;
-          showTip(n);
-          canvas.style.cursor = n ? (n.href || G.selectable ? 'pointer' : 'grab') : 'default';
+          hoverEdge = edge;
+          if (n) showTip(n);
+          else if (edge) showTip(tipForEdge(edge));
+          else showTip(null);
+          canvas.style.cursor = n ? (n.href || G.selectable ? 'pointer' : 'grab')
+            : edge ? (edge.paper.href ? 'pointer' : 'default') : 'default';
           repaint();
         } else if (n) {
           showTip(n);
+        } else if (edge) {
+          showTip(tipForEdge(edge));
         }
       });
 
@@ -433,6 +525,8 @@
           canvas.setPointerCapture(e.pointerId);
           dragging.dragStart = p;
           start();
+        } else {
+          downPoint = p;
         }
       });
 
@@ -447,12 +541,20 @@
             if (G.selectable && n.kind === 'person') { selectPerson(n); repaint(); }
             else if (n.href) { window.open(n.href, '_blank', 'noopener'); }
           }
+        } else if (downPoint) {
+          var p2 = localPoint(e);
+          var moved2 = Math.hypot(p2.x - downPoint.x, p2.y - downPoint.y);
+          if (moved2 < 5) {
+            var edge = edgeAt(p2.x, p2.y);
+            if (edge && edge.paper.href) window.open(edge.paper.href, '_blank', 'noopener');
+          }
+          downPoint = null;
         }
         start();
       });
 
       canvas.addEventListener('pointerleave', function () {
-        hovered = null; dragging = null;
+        hovered = null; dragging = null; hoverEdge = null; downPoint = null;
         showTip(null);
         repaint();
       });

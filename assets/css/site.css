@@ -690,6 +690,10 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 3rem 0; }
   font-weight: 500;
 }
 .netfig-tip[data-show='true'] { opacity: 1; }
+/* Default anchor sits above the node/edge. Near the top or a side edge of
+   the canvas that would push the tip out of the (overflow: hidden) figure,
+   so JS flips to this and clamps horizontally — see showTip() in network.js. */
+.netfig-tip.tip-below { transform: translate(-50%, 22%); }
 .netfig-tip .tip-sub {
   display: block;
   font-family: 'JetBrains Mono', monospace;
@@ -976,6 +980,11 @@ svg.bip {
 .collab {
   border-bottom: 1px solid var(--line);
 }
+/* One-paper collaborators stay out of the visible list (it would be mostly
+   names), but the <details> element itself is kept in the DOM — the network
+   graph reads this markup directly, so hiding it here would also delete that
+   person from the graph. */
+.collab[data-count='1'] { display: none; }
 .collab > summary {
   display: flex;
   align-items: center;

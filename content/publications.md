@@ -47,7 +47,7 @@ venue: arXiv:2604.07228
 year: 2026
 badge: preprint
 tags: cooperation
-concepts: group-interactions, evolutionary-games
+concepts: group-interactions, evolutionary-games, cooperation
 links: arXiv | https://arxiv.org/abs/2604.07228
 
 
@@ -70,7 +70,7 @@ concepts: group-interactions, evolutionary-games, cooperation
 links: DOI | https://doi.org/10.1098/rsif.2025.0134, arXiv | https://arxiv.org/abs/2502.09446, code | https://github.com/sadekar-onkar/overlap-ho-game
 
 ### Population connectivity shapes the distribution and complexity of chimpanzee cumulative culture
-authors: C. Gunasekaram, F. Battiston, O. Sadekar, C. Padilla-Iglesias, MA. van Noordwijk, R. Furrer, A. Manica, J. Bertranpetit, A. Whiten, CP. van Schaik, L. Vinicius, and A. B. Migliano
+authors: C. Gunasekaram, F. Battiston, O. Sadekar, C. Padilla-Iglesias, MA. van Noordwijk, R. Furrer, A. Manica, J. Bertranpetit, A. Whiten, CP. van Schaik, L. Vinicius, A. B. Migliano
 venue: *Science* 386, 920–925
 year: 2024
 tags: culture
@@ -98,7 +98,7 @@ authors: A. Civilini, O. Sadekar, F. Battiston, J. Gómez-Gardeñes, V. Latora
 venue: *Physical Review Letters* 132, 167401
 year: 2024
 tags: cooperation
-concepts: group interactions, evolutionary-games, cooperation
+concepts: group-interactions, evolutionary-games, cooperation
 links: DOI | https://doi.org/10.1103/PhysRevLett.132.167401, arXiv | https://arxiv.org/abs/2303.11475
 
 ### An infectious diseases hazard map for India based on mobility and transportation networks
@@ -114,7 +114,7 @@ authors: S. Saryal, O. Sadekar, B. K. Agarwalla
 venue: *Physical Review E* 103, 022141
 year: 2021
 tags: statphys
-concepts: nonequilibrium
+concepts: statistical-physics
 links: DOI | https://doi.org/10.1103/PhysRevE.103.022141, arXiv | https://arxiv.org/abs/2008.08521
 
 ### Active Brownian motion in two dimensions under stochastic resetting
@@ -122,7 +122,7 @@ authors: V. Kumar, O. Sadekar, U. Basu
 venue: *Physical Review E* 102, 052129
 year: 2020
 tags: statphys
-concepts: stochastic-resetting, nonequilibrium
+concepts: stochastic-resetting, statistical-physics
 links: DOI | https://doi.org/10.1103/PhysRevE.102.052129, arXiv | https://arxiv.org/abs/2008.03294
 
 ### Zero-current nonequilibrium state in symmetric exclusion process with dichotomous stochastic resetting
@@ -130,5 +130,5 @@ authors: O. Sadekar, U. Basu
 venue: *Journal of Statistical Mechanics* 073209
 year: 2020
 tags: statphys
-concepts: stochastic-resetting, nonequilibrium
+concepts: stochastic-resetting, statistical-physics
 links: DOI | https://doi.org/10.1088/1742-5468/ab9e5e, arXiv | https://arxiv.org/abs/2004.00951

@@ -114,7 +114,6 @@ def slug(s):
 
 SITE, _ = read('site.md')
 NAV = SITE.get('nav', [])
-CONCEPTS = SITE.get('concepts', {})
 
 
 def e(s):
@@ -353,24 +352,40 @@ def rows(items):
 # ------------------------------------------------------ publication model ---
 
 def load_publications():
+    """Parse publications.md. `tags:`/`concepts:` are written as plain labels
+    right on the paper ("Higher-order networks", not a slug) — there is no
+    separate vocabulary file to keep in sync. This slugifies each label into
+    a stable key for data-attributes/CSS, and collects key -> label (first
+    seen wins) so filter buttons and the bipartite diagram can be built
+    without any other config."""
     meta, body = read('publications.md')
     groups = []
+    tag_labels, concept_labels = {}, {}
     for heading, sub in sections(body):
         papers = []
         for it in entries(sub):
+            tags, concepts = [], []
+            for label in split_list(it.get('tags', '')):
+                key = slug(label)
+                tag_labels.setdefault(key, label)
+                tags.append(key)
+            for label in split_list(it.get('concepts', '')):
+                key = slug(label)
+                concept_labels.setdefault(key, label)
+                concepts.append(key)
             papers.append({
                 'title': it['title'],
                 'authors': it.get('authors', ''),
                 'venue': it.get('venue', ''),
                 'year': it.get('year', ''),
                 'badge': it.get('badge', ''),
-                'tags': split_list(it.get('tags', '')),
-                'concepts': split_list(it.get('concepts', '')),
+                'tags': tags,
+                'concepts': concepts,
                 'links': it.get('links', ''),
                 'note': it['body'],
             })
         groups.append((heading, papers))
-    return meta, groups
+    return meta, groups, tag_labels, concept_labels
 
 
 def pub_item(p):
@@ -393,7 +408,7 @@ def pub_item(p):
 
 # ------------------------------------------ static bipartite concept graph ---
 
-def bipartite_svg(papers):
+def bipartite_svg(papers, concept_labels):
     """A deterministic two-column bipartite diagram: concepts | papers.
 
     No physics, no JavaScript. Hover highlighting is done with CSS :has(),
@@ -443,7 +458,7 @@ def bipartite_svg(papers):
         parts.append('<circle class="bip-dot" cx="%d" cy="%.1f" r="%.1f"/>'
                      % (cx, cy, 4 + min(n, 8) * 0.7))
         parts.append('<text class="bip-label bip-label--left" x="%d" y="%.1f">%s</text>'
-                     % (cx - 14, cy + 4, e(CONCEPTS.get(c, c))))
+                     % (cx - 14, cy + 4, e(concept_labels.get(c, c))))
         parts.append('<text class="bip-count" x="%d" y="%.1f">%d</text>' % (cx + 16, cy + 4, n))
         parts.append('</g>')
 
@@ -484,7 +499,7 @@ def build_home():
     _, newsbody = read('news.md')
     news = entries(newsbody)[:int(SITE.get('news_on_home', 6))]
 
-    _, pubgroups = load_publications()
+    _, pubgroups, _, _ = load_publications()
     allpapers = [p for _, ps in pubgroups for p in ps]
     selected_titles = split_list(meta.get('selected', ''))
     selected = [p for t in selected_titles
@@ -626,17 +641,17 @@ def build_research():
 
 
 def build_publications():
-    meta, groups = load_publications()
+    meta, groups, tag_labels, concept_labels = load_publications()
     allpapers = [p for _, ps in groups for p in ps]
 
     filters = ['<button class="filter" type="button" data-filter="all" aria-pressed="true">All</button>']
-    for key, label in (SITE.get('tags') or {}).items():
+    for key, label in sorted(tag_labels.items(), key=lambda kv: kv[1]):
         filters.append('<button class="filter" type="button" data-filter="%s" aria-pressed="false">%s</button>'
                        % (e(key), e(label)))
 
     out = page_head(meta.get('eyebrow', ''), meta.get('title', 'Publications'), meta.get('lede', ''))
     out += '  <section class="section">\n    <div class="wrap">\n'
-    out += bipartite_svg(allpapers)
+    out += bipartite_svg(allpapers, concept_labels)
     out += ('      <div class="pub-toolbar" style="margin-top:2.5rem">\n'
             '        <span class="label">Filter</span>\n        %s\n'
             '        <span class="mono" style="margin-left:auto; color:var(--ink-2)" data-pub-count>%d papers</span>\n'
@@ -673,7 +688,7 @@ def build_publications():
 
 def build_collaborators():
     """Derived entirely from publications.md — there is no separate list."""
-    meta, groups = load_publications()
+    meta, groups, _, _ = load_publications()
     me = SITE.get('short_name', '')
     profiles = SITE.get('profiles', {}) or {}
 
@@ -688,20 +703,25 @@ def build_collaborators():
                 by_person.setdefault(a, []).append((p['title'], href))
 
     people = sorted(by_person.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+    listed = sum(1 for _, papers in people if len(papers) >= 2)
 
     blocks = []
     for name, papers in people:
         url = profiles.get(name, '')
         items = ''.join(
-            '\n          <li>%s</li>' %
-            (('<a href="%s">%s</a>' % (e(h), md_inline(t))) if h else md_inline(t))
+            '\n          <li data-href="%s">%s</li>' %
+            (e(h or ''), ('<a href="%s">%s</a>' % (e(h), md_inline(t))) if h else md_inline(t))
             for t, h in papers)
+        # People with a single shared paper stay out of the visible "everyone,
+        # in full" list (data-count="1" is hidden by CSS) but the <details>
+        # block itself is still emitted, so the network graph — which reads
+        # this markup directly — still has them as a full node.
         blocks.append(
-            '      <details class="collab" data-person="%s"%s>\n'
+            '      <details class="collab" data-person="%s" data-count="%d"%s>\n'
             '        <summary><span class="collab-name">%s</span>'
             '<span class="collab-count">%d %s</span></summary>\n'
             '        <ol class="collab-papers">%s\n        </ol>\n      </details>\n'
-            % (e(name), (' data-url="%s"' % e(url)) if url else '', e(name),
+            % (e(name), len(papers), (' data-url="%s"' % e(url)) if url else '', e(name),
                len(papers), 'paper' if len(papers) == 1 else 'papers', items))
 
     out = page_head(meta.get('collab_eyebrow', 'People'), 'Collaborators',
@@ -709,7 +729,7 @@ def build_collaborators():
     out += '''  <section class="section">
     <div class="wrap">
       <figure class="netfig" data-network="collab" data-hub-name="%s">
-        <canvas role="img" aria-label="A network of co-authors. Click a node to list the papers you share."></canvas>
+        <canvas role="img" aria-label="A network of co-authors. Every edge is a shared paper — hover or click an edge to see which one, or click a person to list everything you share."></canvas>
         <div class="netfig-tip" data-net-tip></div>
         <figcaption class="netfig-bar"><p class="netfig-caption" data-net-caption></p></figcaption>
       </figure>
@@ -720,7 +740,7 @@ def build_collaborators():
   </section>
 ''' % (e(SITE['name']),
        section_head('Everyone, in full',
-                    '<span class="mono" style="color:var(--ink-2)">%d people</span>' % len(people))
+                    '<span class="mono" style="color:var(--ink-2)">%d people</span>' % listed)
        .replace('      <div', '      <div style="margin-top:3rem"', 1),
        ''.join(blocks))
 
