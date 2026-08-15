@@ -902,6 +902,54 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 3rem 0; }
   font-weight: 500;
 }
 
+/* — static bipartite diagram (publications) —
+   Generated at build time as inline SVG. No JavaScript: the hover highlight
+   is pure CSS :has(), which simply does nothing in browsers without it. */
+.bipfig {
+  margin: 0 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.bipfig-scroll { overflow-x: auto; padding: 1.25rem 0.5rem 0.5rem; }
+.bipfig figcaption {
+  border-top: 1px solid var(--line);
+  background: var(--bg-soft);
+  padding: 0.7rem 1rem;
+  font-size: 0.83rem;
+  color: var(--ink-2);
+}
+svg.bip {
+  display: block;
+  width: 100%;
+  min-width: 46rem;
+  height: auto;
+}
+.bip-edge {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1;
+  opacity: 0.35;
+  transition: opacity 0.15s ease;
+}
+.bip-dot { fill: var(--a1); }
+.bip-dot--paper { fill: var(--surface); stroke: var(--a2); stroke-width: 2; }
+.bip-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11.5px;
+  fill: var(--ink);
+}
+.bip-label--left { text-anchor: end; font-weight: 600; }
+.bip-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  fill: var(--ink-2);
+}
+.bip-concept, .bip-paper { transition: opacity 0.15s ease; }
+.bip-concept:hover .bip-dot { r: 9; }
+.bip-concept:hover { cursor: default; }
+
 /* — collaborators — */
 .collab-panel {
   margin-top: 1.25rem;

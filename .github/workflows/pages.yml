@@ -1,7 +1,8 @@
-# Deploys the site exactly as it sits in the repo — there is no build step.
+# Builds the site from content/*.md and deploys it.
+#
 # GitHub Pages for this repo is configured with build_type "workflow", so a
-# plain push to gh-pages does NOT publish anything; this workflow is what
-# actually puts files on onkar.sadekar.net.
+# plain push does NOT publish anything on its own — this workflow is what puts
+# files on onkar.sadekar.net.
 name: Deploy site
 
 on:
@@ -14,7 +15,6 @@ permissions:
   pages: write
   id-token: write
 
-# Never let two deploys race; queue them instead of cancelling.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -29,17 +29,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Stage the site
-        # Everything except repo plumbing and the internal notes file.
-        run: |
-          mkdir -p _site
-          rsync -a \
-            --exclude '.git' \
-            --exclude '.github' \
-            --exclude '_site' \
-            --exclude 'CLAUDE.md' \
-            ./ _site/
-          ls -la _site
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        run: pip install markdown pyyaml
+
+      - name: Build site
+        run: python build.py
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

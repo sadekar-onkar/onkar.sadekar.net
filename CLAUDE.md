@@ -2,161 +2,149 @@
 
 Personal academic site for Onkar Sadekar. Read this before changing anything.
 
+## How to update the site
+
+**Edit a `.md` file in `content/`, commit, push. That is the whole workflow.**
+GitHub Actions runs `build.py`, which turns `content/` + `files/` into HTML and
+deploys it. Onkar does not edit HTML, and there is no HTML in the repo.
+
+To replace the photo or the CV: **drop a new file into `files/`** using the same
+name (`photo.jpg`, `cv.pdf`). Nothing else changes.
+
+```
+content/
+  site.md            everything global: name, nav, links, tag + concept vocabularies
+  home.md            hero tagline, about, positions, theme cards, selected papers
+  news.md            the "Recently" feed
+  research.md        the five research themes
+  publications.md    every paper — ALSO the source for the collaborators page
+  talks.md           talks, teaching, service
+  code.md            repositories
+  cv.md              CV sections
+  404.md
+files/
+  photo.jpg          just replace it
+  cv.pdf             just replace it
+assets/              css, js, fonts, favicon — design, not content
+build.py             content/ + files/  ->  _site/
+_site/               build output; gitignored, never committed
+```
+
+Local preview:
+
+```bash
+pip3 install markdown pyyaml    # once
+python3 build.py --serve        # http://localhost:8000
+```
+
 ## The one rule
 
-**Static, zero-dependency.** Plain HTML, CSS and vanilla JS. No frameworks, no
-bundler, no package manager, no build step, no CDN requests, no trackers.
-`git push` is the entire deploy. If a change would add a dependency, it is the
-wrong change.
+The **output** is static and dependency-free: plain HTML, CSS and vanilla JS, no
+frameworks, no CDN requests, no trackers. `markdown` and `pyyaml` are build-time
+only and never reach the browser. Fonts are self-hosted in `assets/fonts/`
+(~102 KB) so the site makes no third-party requests.
 
-Fonts are self-hosted in `assets/fonts/` (three variable `.woff2` files, ~102 KB
-total) precisely so the site makes no third-party requests.
+## Content format
 
-## Stack & layout
+Every content file uses the same shape: optional YAML front matter, then entries.
 
-```
-index.html          hero (ambient network bg) + about + research teaser + news
-research.html       five research themes, each with an inline SVG motif
-publications.html   papers grouped by year, filterable + papers/concepts graph
-collaborators.html  co-author graph + the full list of people
-talks.html          talks, teaching, service
-code.html           released code & data
-cv.html             structured CV + PDF download
-404.html
-.nojekyll           tells GitHub Pages to serve the files as-is
-assets/
-  css/site.css      everything; the palette system lives at the top
-  js/site.js        theme + palette switching, nav, filters, reveal-on-scroll
-  js/network.js     the hero visualisation (four modes)
-  fonts/*.woff2     self-hosted
-  img/              portrait, favicon
-  pdf/              CV
+```markdown
+### Title of the entry
+key: value
+key: value
+
+Free Markdown body until the next ### heading.
 ```
 
-Header and footer are **duplicated in every page**. That is the deliberate cost
-of having no build step: change the nav in one file, change it in all seven.
+`##` headings group entries into page sections. In `talks.md` the front matter's
+`style:` map picks how each section renders (`timeline`, `rows`, `cards`,
+`prose`).
+
+### Adding a paper
+
+Only `content/publications.md`. Copy a block:
+
+- `authors:` — comma separated. `short_name` from site.md is bolded automatically.
+- `venue:` — Markdown allowed (`*Physical Review E* 110, 014306`).
+- `year:` — drives the year headings.
+- `tags:` — filter buttons; keys come from `tags:` in site.md.
+- `concepts:` — the bipartite diagram; keys come from `concepts:` in site.md.
+- `links:` — `Label | url, Label | url`. The **first** link becomes the title link.
+
+The **collaborators page is generated from the `authors:` lines** — there is no
+separate people list to maintain. Give someone a profile link by adding them to
+`profiles:` in site.md.
 
 ## Deploy
 
-Repo: `sadekar-onkar/sadekar-onkar.github.io`, branch **`gh-pages`**.
+Repo `sadekar-onkar/sadekar-onkar.github.io`, branch **`gh-pages`**.
 
-```bash
-git add -A && git commit -m "..." && git push origin gh-pages
-```
+**This repo's Pages setting is `build_type: workflow`**, so pushing does not
+publish by itself — `.github/workflows/pages.yml` does. Before that workflow
+existed the last successful deployment was December 2023, which is why commits
+made through 2024–2025 never appeared. If the site stops updating, check the
+Actions tab first, not the branch.
 
-**Important:** this repo's Pages setting is `build_type: workflow`, so a push to
-`gh-pages` does **not** publish anything by itself — `.github/workflows/pages.yml`
-is what actually deploys. Before it existed, the last successful deployment was
-December 2023, which is why commits made to `gh-pages` through 2024–2025 never
-appeared on the live site. If the site ever stops updating, check the Actions tab
-first, not the branch.
+Custom domain **onkar.sadekar.net** is set in the repo's Pages settings, not by a
+`CNAME` file. **Do not create a `CNAME` file** and do not remove `.nojekyll`.
 
-The workflow copies the tree as-is (no build) and excludes `.git`, `.github` and
-this file. The stale al-folio workflow on the `master` branch is unrelated and
-only fires on pushes to `master`.
-
-Custom domain **onkar.sadekar.net** is configured in the repo's GitHub Pages
-settings, not by a `CNAME` file in the tree. **Do not create a `CNAME` file** and
-do not remove `.nojekyll`.
+Making the repo private would require GitHub Pro; note the published site stays
+public either way — a private repo hides the source, not the site.
 
 ## Theming
 
-The theme is stored under `theme-v2` / `palette-v2`. The v1 build wrote the
-theme on **every page load**, which pinned whichever mode the visitor's OS was
-in at their first visit and then ignored the OS forever. Only an explicit click
-writes to storage now; renaming the keys retired the bad values. Do not call
-`setTheme()` on load without passing `persist === false`.
+Stored under `theme-v2` / `palette-v2`. The v1 build wrote the theme on **every
+page load**, which pinned whichever mode the visitor's OS was in at their first
+visit and then ignored the OS forever. Only an explicit click writes to storage
+now. Do not call `setTheme()` on load without `persist === false`.
 
-Two independent axes, both on `<html>` and both persisted in `localStorage`:
+Two axes on `<html>`: `data-theme` (`light`/`dark`, follows the OS until clicked)
+and `data-palette` (`citrus`, `coral`, `indigo`, `botanical`).
 
-- `data-theme` — `light` | `dark`. Defaults to the OS preference, and keeps
-  following it until the visitor clicks the toggle.
-- `data-palette` — `citrus` | `coral` | `indigo` | `botanical`.
+Every colour is a semantic custom property (`--bg`, `--bg-soft`, `--surface`,
+`--ink`, `--ink-2`, `--line`, `--a1`…`--a4`, `--a1-ink`, `--glow`). **No literal
+colour appears anywhere else in `site.css`** except inside `@media print`. All
+152 text/background pairs across the four palettes × light/dark are verified at
+WCAG AA; re-check if you change an accent.
 
-Every colour in the site is a semantic custom property (`--bg`, `--ink`,
-`--ink-2`, `--line`, `--a1`, `--a2`, `--a3`, `--a1-ink`, `--glow`, `--surface`,
-`--bg-soft`). **No literal colour appears anywhere else in `site.css`.** Adding a
-palette means adding two blocks near the top of the stylesheet and one entry to
-`PALETTES` in `site.js`; nothing else needs to change.
+`--bg-soft` is the alternating band behind About / Selected papers / Contact.
+It does switch correctly with the theme — verified by dumping computed styles on
+both pages in both modes.
 
-All eight palette × theme combinations were checked to WCAG AA (4.5:1) for text,
-muted text and accents against every background they sit on. If you change an
-accent, re-check it.
+## The networks
 
-An inline script in each `<head>` applies the stored theme before first paint.
-Keep it — removing it reintroduces a flash of the wrong colours.
+- **publications** — a *static* bipartite SVG (papers ↔ concepts) emitted by
+  `bipartite_svg()` in build.py. No JavaScript at all. The hover highlight is
+  CSS `:has()`, which simply does nothing in browsers that lack it.
+- **collaborators** — canvas, `data-network="collab"`. Reads the `.collab`
+  entries from the page. Clicking a person fills the panel above the list.
+- **home** — `data-network="ambient"`, decorative only, `pointer-events: none`.
 
-## The networks (`assets/js/network.js`)
-
-Three figures, each chosen by the `data-network` attribute on its container:
-
-- `papers` (publications.html) — bipartite: papers and the concepts they use.
-  An edge means "this paper uses this concept".
-- `collab` (collaborators.html) — co-authors around a hub. Clicking a person
-  fills the panel above the list with the papers you share.
-- `ambient` (index.html) — decorative background behind the hero. No labels,
-  no interaction, `pointer-events: none`.
-
-**There is no data array in this file.** Both real graphs are built by reading
-the page's own HTML, so `publications.html` and `collaborators.html` are the
-single source of truth. Add a paper to the page and the graph picks it up.
-
-- papers graph reads `.pub[data-concepts]` — the space-separated concept slugs.
-  Add a slug to `CONCEPT_LABEL` at the top of network.js to give it a caption.
-- collaborators graph reads `.collab[data-person]` and the `<li>` items inside
-  its `.collab-papers` list. Add `data-url="…"` to a `.collab` to give that
-  person a profile link in the panel.
-
-Two things that are deliberate and should not be "fixed":
+Two things in `network.js` are deliberate and should not be "fixed":
 
 1. **No cursor-repulsion force.** An earlier version pushed nodes away from the
-   pointer. It looked lively and made the graph unusable — nodes fled the
-   cursor, so they could never be hovered or clicked.
-2. **The simulation stops when it settles.** `frame()` returns once kinetic
-   energy drops below a threshold. A static graph is what makes clicking feel
-   solid, and it keeps the page off the CPU. Anything that changes the picture
-   calls `start()` (physics) or `repaint()` (draw only).
+   pointer; nodes fled the cursor and could never be hovered or clicked.
+2. **The simulation stops once it settles.** A static graph is what makes
+   clicking feel solid and keeps the page off the CPU. `start()` resumes physics,
+   `repaint()` redraws only.
 
-Labels are placed largest-first with collision detection; any label that would
-overlap one already placed is dropped, so the figure never turns into
-overlapping text.
-
-Layout tuning: `G.scale` in `load()` sets overall spacing from the canvas size,
-per-link `len`/`k` set rest length and stiffness, per-graph `rep` scales global
-repulsion.
-
-## Adding a paper
-
-Everything about a paper lives in **`publications.html`** and nowhere else.
-
-1. Copy an existing `<li class="pub" …>` block into the right
-   `<section class="pub-year">` (or add a new year section — the heading is
-   `<h3 class="year-head"><span>2027</span></h3>`).
-2. `data-tags` drives the filter buttons: one of `higher-order`, `collective`,
-   `culture`, `statphys`, `applied`.
-3. `data-concepts` drives the graph: space-separated slugs from `CONCEPT_LABEL`
-   in network.js.
-4. Update the `data-pub-count` number in the toolbar.
-5. Optionally add it to "Selected papers" on `index.html`, to the relevant theme
-   on `research.html`, and to the people involved in `collaborators.html`.
-
-Publications are hand-written HTML rather than generated from a data file so
-they are indexable and work without JavaScript. The filtering on top is
-progressive enhancement — with JS off, the full list still renders.
+Labels are placed largest-first with collision detection; any that would overlap
+one already placed is dropped.
 
 ## Content still to verify
 
-- The **Fall 2025 teaching entry** ("Current debates in evolutionary biology and
-  anthropology") is attributed to UZH on `talks.html`; the source CV does not
-  name the institution. Confirm.
-- The **peer review** card on `talks.html` is generic — name the actual journals.
-- The **CEU Best Dissertation Award** wording was reconstructed from a 2026 payment
-  form (three recipients, EUR 1,500). Check CEU's official name for the award.
-- `assets/pdf/Onkar_Sadekar_CV.pdf` is the May 2026 version and does not include
-  the June 2026 NBA preprint.
+- The **Fall 2025 teaching entry** is attributed to UZH in `talks.md`; the source
+  CV does not name the institution.
+- The **peer review** entry in `talks.md` is generic — name the actual journals.
+- The **CEU Best Dissertation Award** wording was reconstructed from a 2026
+  payment form (three recipients, EUR 1,500). Check CEU's official name.
+- `files/cv.pdf` is the May 2026 version and predates the NBA preprint.
 - The portrait is from 2022.
 
 ## Not planned
 
-A private area was discussed and dropped. Do not build one without being asked
-again.
+A private area was discussed and dropped. GitHub Pages has no server to
+configure, so real access control there needs Cloudflare Access, Netlify, or
+self-hosting. (Tiago Peixoto's skewed.de does it with Apache HTTP Basic Auth on
+his own box — not something that ports to Pages.) Do not build one without being
+asked again.

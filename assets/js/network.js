@@ -2,18 +2,17 @@
 
    Three things live here:
 
-     papers      publications.html — a bipartite graph of papers and the
-                 concepts they use. An edge means "this paper uses this
-                 concept", so the link is labelled rather than inferred.
      collab      collaborators.html — co-authors around a hub. Clicking a
                  person filters the list below to the papers you share.
      ambient     index.html — a quiet graph drifting behind the hero. Purely
                  decorative, no labels, no interaction.
 
-   IMPORTANT: the papers and collaborator graphs are built by reading the
-   page's own HTML. publications.html and collaborators.html are the single
-   source of truth — there is no data array here to keep in sync. Add a paper
-   to the page and the graph picks it up.
+   The collaborator graph is built by reading the page's own HTML, which
+   build.py generates from content/publications.md. There is no data array
+   here to keep in sync.
+
+   The publications page uses a static bipartite SVG emitted by build.py
+   instead — no physics, no JavaScript at all.
 
    Plain canvas, no libraries. Colours come from the CSS custom properties, so
    every palette and light/dark switch is followed automatically. The layout
@@ -23,21 +22,6 @@
 
 (function () {
   'use strict';
-
-  var CONCEPT_LABEL = {
-    'higher-order': 'Higher-order networks',
-    'evolutionary-games': 'Evolutionary game theory',
-    'public-goods': 'Public goods games',
-    'cooperation': 'Cooperation',
-    'collective-behaviour': 'Collective behaviour',
-    'cultural-evolution': 'Cultural evolution',
-    'empirical-data': 'Empirical data',
-    'sports': 'Sports analytics',
-    'epidemics': 'Epidemic spreading',
-    'stochastic-resetting': 'Stochastic resetting',
-    'nonequilibrium': 'Nonequilibrium physics',
-    'review': 'Review & synthesis'
-  };
 
   /* ------------------------------------------------------------- helpers -- */
 
@@ -71,70 +55,6 @@
 
   function truncate(s, n) {
     return s.length > n ? s.slice(0, n - 1).replace(/[\s,;:]+$/, '') + '…' : s;
-  }
-
-  /* --------------------------------------------------- papers x concepts -- */
-
-  function buildPapers() {
-    var pubs = [].slice.call(document.querySelectorAll('.pub[data-concepts]'));
-    if (!pubs.length) return null;
-
-    var nodes = [], links = [], conceptIndex = {}, order = [];
-
-    // concept nodes first, so they keep stable tones
-    pubs.forEach(function (el) {
-      (el.dataset.concepts || '').split(/\s+/).forEach(function (c) {
-        if (c && !(c in conceptIndex)) { conceptIndex[c] = -1; order.push(c); }
-      });
-    });
-    order.forEach(function (c, i) {
-      conceptIndex[c] = nodes.length;
-      nodes.push({
-        x: Math.cos(i / order.length * 6.283) * 0.55,
-        y: Math.sin(i / order.length * 6.283) * 0.55,
-        vx: 0, vy: 0, r: 0, tone: i % 5,
-        kind: 'concept', key: c,
-        label: CONCEPT_LABEL[c] || c, degree: 0
-      });
-    });
-
-    pubs.forEach(function (el, i) {
-      var a = el.querySelector('.pub-title a');
-      var venue = el.querySelector('.pub-venue');
-      var cs = (el.dataset.concepts || '').split(/\s+/).filter(Boolean);
-      var idx = nodes.length;
-      nodes.push({
-        x: Math.cos(i / pubs.length * 6.283) * 1.0 + rnd(-0.1, 0.1),
-        y: Math.sin(i / pubs.length * 6.283) * 1.0 + rnd(-0.1, 0.1),
-        vx: 0, vy: 0, r: 5.5,
-        kind: 'paper',
-        label: truncate((a ? a.textContent : '').trim(), 64),
-        sub: venue ? venue.textContent.trim() : '',
-        href: a ? a.getAttribute('href') : null,
-        el: el,
-        tone: cs.length ? nodes[conceptIndex[cs[0]]].tone : 3
-      });
-      cs.forEach(function (c) {
-        var ci = conceptIndex[c];
-        nodes[ci].degree++;
-        links.push({ a: ci, b: idx, len: 64, w: 1.1, concept: c });
-      });
-    });
-
-    // concept nodes are sized by how many papers hang off them
-    nodes.forEach(function (n) {
-      if (n.kind === 'concept') {
-        n.r = 6 + Math.min(n.degree, 8) * 1.5;
-        n.sub = n.degree + (n.degree === 1 ? ' paper' : ' papers');
-      }
-    });
-
-    return {
-      nodes: nodes, links: links,
-      labelConcepts: true,
-      caption: '<b>Papers and the ideas they share.</b> Large nodes are concepts, small ones are papers; ' +
-               'an edge means the paper uses that concept. Hover to follow one, click a paper to read it.'
-    };
   }
 
   /* -------------------------------------------------------- collaborators -- */
@@ -222,7 +142,7 @@
     return { nodes: nodes, links: links, ambient: true, rep: 0.18 };
   }
 
-  var MODES = { papers: buildPapers, collab: buildCollab, ambient: buildAmbient };
+  var MODES = { collab: buildCollab, ambient: buildAmbient };
 
   /* ------------------------------------------------------------- runtime -- */
 
@@ -279,8 +199,7 @@
           if (d > 260 * S) continue;
           f = (1400 + (n.r + m.r) * 60) * S2 * rep / (d * d);
           // labelled hubs push each other harder so their captions have room
-          if (n.kind === 'concept' && m.kind === 'concept') f *= 3.2;
-          dx /= d; dy /= d;
+            dx /= d; dy /= d;
           n.vx -= dx * f; n.vy -= dy * f;
           m.vx += dx * f; m.vy += dy * f;
         }
