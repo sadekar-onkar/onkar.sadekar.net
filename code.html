@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Page not found — Onkar Sadekar</title>
-<meta name="description" content="That page does not exist.">
-<link rel="canonical" href="https://onkar.sadekar.net/404.html">
+<title>Code &amp; data — Onkar Sadekar</title>
+<meta name="description" content="Simulation code and analysis notebooks accompanying Onkar Sadekar&rsquo;s papers.">
+<link rel="canonical" href="https://onkar.sadekar.net/code.html">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Page not found — Onkar Sadekar">
-<meta property="og:description" content="That page does not exist.">
-<meta property="og:url" content="https://onkar.sadekar.net/404.html">
+<meta property="og:title" content="Code &amp; data — Onkar Sadekar">
+<meta property="og:description" content="Simulation code and analysis notebooks accompanying Onkar Sadekar&rsquo;s papers.">
+<meta property="og:url" content="https://onkar.sadekar.net/code.html">
 <meta property="og:image" content="https://onkar.sadekar.net/assets/img/onkar.jpg">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
@@ -43,7 +43,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
       <li><a href="research.html">Research</a></li>
       <li><a href="publications.html">Publications</a></li>
       <li><a href="talks.html">Talks &amp; teaching</a></li>
-      <li><a href="code.html">Code</a></li>
+      <li><a href="code.html" aria-current="page">Code</a></li>
       <li><a href="cv.html">CV</a></li>
     </ul>
 
@@ -70,18 +70,77 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
 </header>
 
 <main id="main">
-  <section class="section" style="text-align:center; padding-top:6rem">
-    <div class="wrap wrap--narrow">
-      <p class="eyebrow">Error 404</p>
-      <h1>This node has no edges</h1>
-      <p class="lede" style="color:var(--ink-2)">
-        The page you were looking for is not here. It may have moved, or it may
-        never have existed &mdash; either way, the graph is disconnected at this point.
-      </p>
-      <p style="margin-top:2rem">
-        <a class="btn btn--primary" href="index.html">Back to the homepage</a>
-        <a class="btn" href="publications.html">Publications</a>
-      </p>
+  <section class="page-head">
+    <div class="wrap">
+      <p class="eyebrow">Reproducibility</p>
+      <h1>Code &amp; data</h1>
+      <p class="lede">Simulation code and analysis notebooks for my papers. Everything is on <a href="https://github.com/sadekar-onkar">GitHub</a>; if something you need is missing, email me and I will dig it out.</p>
+      <div class="wash" aria-hidden="true">
+          <svg viewBox="0 0 320 200" fill="none">
+            <g stroke="currentColor" stroke-width="1" opacity="0.35">
+              <path d="M40 100 L110 45 L180 80 L250 40 L300 95 L240 150 L160 160 L90 150 Z"/>
+              <path d="M110 45 L160 160 M180 80 L240 150 M40 100 L180 80 M110 45 L250 40 M90 150 L180 80"/>
+            </g>
+            <g fill="currentColor" opacity="0.14">
+              <path d="M110 45 L180 80 L90 150 Z"/>
+              <path d="M180 80 L250 40 L240 150 Z"/>
+            </g>
+            <g fill="currentColor">
+              <circle cx="40" cy="100" r="4"/><circle cx="110" cy="45" r="5.5"/>
+              <circle cx="180" cy="80" r="6.5"/><circle cx="250" cy="40" r="4.5"/>
+              <circle cx="300" cy="95" r="3.5"/><circle cx="240" cy="150" r="5"/>
+              <circle cx="160" cy="160" r="4"/><circle cx="90" cy="150" r="4.5"/>
+            </g>
+          </svg>
+        </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="grid grid--2">
+
+        <article class="card card--link reveal">
+          <span class="mono" style="color:var(--a1)">Python &middot; Jupyter</span>
+          <h3><a href="https://github.com/sadekar-onkar/overlap-ho-game">overlap-ho-game</a></h3>
+          <p>Simulations for <em>Drivers of cooperation in social dilemmas on
+             higher-order networks</em> &mdash; evolutionary games on hypergraphs
+             with controlled group overlap.</p>
+          <ul class="chips"><li class="chip chip--a1">J. R. Soc. Interface 2025</li></ul>
+        </article>
+
+        <article class="card card--link reveal">
+          <span class="mono" style="color:var(--a2)">Python &middot; Jupyter</span>
+          <h3><a href="https://github.com/sadekar-onkar/cricket_public">cricket_public</a></h3>
+          <p>All the code to reproduce <em>Individual and team performance in
+             cricket</em>, including the ball-by-ball data pipeline and the
+             performance decomposition.</p>
+          <ul class="chips"><li class="chip chip--a2">R. Soc. Open Sci. 2024</li></ul>
+        </article>
+
+        <article class="card card--link reveal">
+          <span class="mono" style="color:var(--a3)">Python &middot; Jupyter</span>
+          <h3><a href="https://github.com/sadekar-onkar/socio_comquant_gdelt">socio_comquant_gdelt</a></h3>
+          <p>Group project from the Socio ComQuant computational social science
+             school, analysing the GDELT global event database.</p>
+          <ul class="chips"><li class="chip">School project</li></ul>
+        </article>
+
+        <article class="card card--link reveal">
+          <span class="mono" style="color:var(--ink-2)">Python &middot; Jupyter</span>
+          <h3><a href="https://github.com/sadekar-onkar/tierslieux_ddps">tierslieux_ddps</a></h3>
+          <p>Analysing French <em>tiers-lieux</em> (third places) using Twitter and
+             Commune Mesure data.</p>
+          <ul class="chips"><li class="chip">Collaboration</li></ul>
+        </article>
+
+      </div>
+
+      <div class="callout reveal" style="margin-top:2.5rem">
+        <p><strong>Tools I work in.</strong> Python (NetworkX, NumPy, pandas,
+        Matplotlib), Julia and C for simulation, Linux and cluster computing,
+        Inkscape and gnuplot for figures, LaTeX for everything else.</p>
+      </div>
     </div>
   </section>
 

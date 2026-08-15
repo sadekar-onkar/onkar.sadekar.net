@@ -1,4 +1,4 @@
 User-agent: *
-Disallow:
+Allow: /
 
-Sitemap: https://sadekar-onkar.github.io/sitemap.xml
+Sitemap: https://onkar.sadekar.net/sitemap.xml
