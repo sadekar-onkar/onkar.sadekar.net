@@ -50,19 +50,6 @@ tags: higher-order
 concepts: higher-order, evolutionary-games, public-goods, cooperation
 links: arXiv | https://arxiv.org/abs/2604.07228
 
-### Evolutionary dynamics and the emergence of cooperation in higher-order networks
-authors: O. Sadekar, A. Civilini, C. Hilbe, V. Latora, J. B. Plotkin, F. Battiston
-venue: In preparation
-badge: in prep
-tags: higher-order
-concepts: higher-order, evolutionary-games, cooperation
-
-### Models of higher-order evolutionary games
-authors: O. Sadekar, A. Civilini, F. Battiston, V. Latora
-venue: Book chapter, Springer Complex Systems series
-badge: chapter
-tags: higher-order
-concepts: higher-order, evolutionary-games, review
 
 ## Peer-reviewed
 

@@ -23,12 +23,13 @@ interactions.
 
 ### 2016–2021 — BS–MS dual degree, Physics
 Indian Institute of Science Education and Research (IISER), Pune, India.
+Master's thesis supervised by Prof. M S Santhanam
+*Thesis:* Infectious disease spread through indian transportation network 
 
 ## Awards & scholarships
 
 ### 2026 — CEU Best Dissertation Award
-One of three recipients across the university, for the doctoral thesis
-*Collective dynamics in evolutionary processes and strategic group interactions*.
+Recognising the best thesis across all academic departments at CEU.
 
 ### 2025 — CEU Award for Advanced Doctoral Students
 Recognising exceptional performance and outstanding research achievement.
