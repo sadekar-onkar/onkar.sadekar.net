@@ -37,8 +37,8 @@ authors: M. Bozhidarova, Y. Cai, R. M. S. Carvalho, D. Cirulli, Q. Dehaene, M. D
 venue: arXiv:2606.27957
 year: 2026
 badge: preprint
-tags: applied
-concepts: empirical-data, sports, collective-behaviour
+tags: sports
+concepts: empirical-data, sport-analytics
 links: arXiv | https://arxiv.org/abs/2606.27957
 
 ### Emergence of cooperation in nonlinear higher-order public goods games
@@ -46,8 +46,8 @@ authors: J. Llabrés, O. Sadekar, F. Malizia, F. Battiston
 venue: arXiv:2604.07228
 year: 2026
 badge: preprint
-tags: higher-order
-concepts: higher-order, evolutionary-games, public-goods, cooperation
+tags: cooperation
+concepts: group-interactions, evolutionary-games
 links: arXiv | https://arxiv.org/abs/2604.07228
 
 
@@ -57,55 +57,55 @@ links: arXiv | https://arxiv.org/abs/2604.07228
 authors: F. Battiston, V. Capraro, F. Karimi, S. Lehmann, A. B. Migliano, O. Sadekar, A. Sánchez, M. Perc
 venue: *Nature Human Behaviour* 9, 2441–2457
 year: 2025
-tags: collective
-concepts: higher-order, collective-behaviour, cooperation, review
+tags: human behaviour
+concepts: group-interactions, evolutionary-games
 links: DOI | https://doi.org/10.1038/s41562-025-02373-5
 
 ### Drivers of cooperation in social dilemmas on higher-order networks
 authors: O. Sadekar, A. Civilini, V. Latora, F. Battiston
 venue: *Journal of the Royal Society Interface* 22, 20250134
 year: 2025
-tags: higher-order
-concepts: higher-order, evolutionary-games, public-goods, cooperation
+tags: cooperation
+concepts: group-interactions, evolutionary-games, cooperation
 links: DOI | https://doi.org/10.1098/rsif.2025.0134, arXiv | https://arxiv.org/abs/2502.09446, code | https://github.com/sadekar-onkar/overlap-ho-game
 
 ### Population connectivity shapes the distribution and complexity of chimpanzee cumulative culture
-authors: C. Gunasekaram, F. Battiston, O. Sadekar, C. Padilla-Iglesias
+authors: C. Gunasekaram, F. Battiston, O. Sadekar, C. Padilla-Iglesias, MA. van Noordwijk, R. Furrer, A. Manica, J. Bertranpetit, A. Whiten, CP. van Schaik, L. Vinicius, and A. B. Migliano
 venue: *Science* 386, 920–925
 year: 2024
 tags: culture
-concepts: cultural-evolution, empirical-data, collective-behaviour
+concepts: empirical-data, anthropology
 links: DOI | https://doi.org/10.1126/science.adk3381
 
 ### Evolutionary game selection creates cooperative environments
 authors: O. Sadekar, A. Civilini, J. Gómez-Gardeñes, V. Latora, F. Battiston
 venue: *Physical Review E* 110, 014306
 year: 2024
-tags: higher-order
-concepts: higher-order, evolutionary-games, cooperation
+tags: cooperation
+concepts: evolutionary-games, cooperation
 links: DOI | https://doi.org/10.1103/PhysRevE.110.014306, arXiv | https://arxiv.org/abs/2311.11128
 
 ### Individual and team performance in cricket
 authors: O. Sadekar, S. Chowdhary, M. S. Santhanam, F. Battiston
 venue: *Royal Society Open Science* 11, 240809
 year: 2024
-tags: applied
-concepts: empirical-data, sports, collective-behaviour
+tags: sports
+concepts: empirical-data, sport-analytics
 links: DOI | https://doi.org/10.1098/rsos.240809, arXiv | https://arxiv.org/abs/2401.15161, code | https://github.com/sadekar-onkar/cricket_public
 
 ### Explosive cooperation in social dilemmas on higher-order networks
 authors: A. Civilini, O. Sadekar, F. Battiston, J. Gómez-Gardeñes, V. Latora
 venue: *Physical Review Letters* 132, 167401
 year: 2024
-tags: higher-order
-concepts: higher-order, evolutionary-games, public-goods, cooperation
+tags: cooperation
+concepts: group interactions, evolutionary-games, cooperation
 links: DOI | https://doi.org/10.1103/PhysRevLett.132.167401, arXiv | https://arxiv.org/abs/2303.11475
 
 ### An infectious diseases hazard map for India based on mobility and transportation networks
 authors: O. Sadekar, M. Budamagunta, G. J. Sreejith, S. Jain, M. S. Santhanam
 venue: *Current Science* 121, 1208–1215
 year: 2021
-tags: applied
+tags: epidemics
 concepts: empirical-data, epidemics
 links: DOI | https://doi.org/10.18520/cs/v121/i9/1208-1215, arXiv | https://arxiv.org/abs/2105.15123
 
