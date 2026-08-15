@@ -752,10 +752,15 @@ def build_collaborators():
 def build_simple(name, filename):
     meta, body = read(name)
     out = page_head(meta.get('eyebrow', ''), meta.get('title', ''), meta.get('lede', ''))
-    for heading, sub in sections(body):
+    for i, (heading, sub) in enumerate(sections(body)):
         items = entries(sub)
         style = meta.get('style', {}).get(heading, meta.get('default_style', 'timeline'))
-        soft = ' section--soft' if len(out.split('class="section')) % 2 == 0 else ''
+        # Alternate by loop index, not by re-scanning the HTML built so far —
+        # that used to count occurrences of the substring `class="section`,
+        # which section_head()'s own `class="section-head"` div also matches,
+        # so every section double-counted and the band never actually
+        # alternated (talks.html rendered every section plain, no shading).
+        soft = ' section--soft' if i % 2 == 1 else ''
         out += '  <section class="section%s">\n    <div class="wrap wrap--narrow">\n' % soft
         out += section_head(heading) if heading else ''
         if style == 'rows':

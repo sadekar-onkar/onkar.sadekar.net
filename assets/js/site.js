@@ -178,6 +178,17 @@
         });
       }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
       reveals.forEach(function (el) { io.observe(el); });
+
+      /* Safety net: this is decoration, not gating content, so it must never
+         leave a section permanently blank. If the observer's first check
+         races a slow font/layout pass and misses an element that was
+         already on screen, nothing scrolls it back into view to trigger a
+         second check — it would just sit at opacity:0 forever, which reads
+         as "the background is broken" rather than "an animation didn't
+         play". Force everything visible shortly after load regardless. */
+      setTimeout(function () {
+        reveals.forEach(function (el) { el.classList.add('is-in'); });
+      }, 1200);
     }
 
     // publication filters (progressive enhancement — the list is real HTML)
