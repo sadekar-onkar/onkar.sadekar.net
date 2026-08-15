@@ -50,6 +50,13 @@
      --glow      translucent accent for washes  */
 
 :root {
+  /* Tell the browser we handle theming ourselves. Without this, Chromium
+     browsers (Brave especially) may apply "Auto Dark Mode for Web Contents",
+     force-inverting pages using a per-page heuristic — which shows up as
+     SOME pages looking wrong while others look fine. It also makes scrollbars
+     and form controls follow the theme. */
+  color-scheme: light;
+
   --bg: #fdfbf7;
   --bg-soft: #f4efe4;
   --surface: #ffffff;
@@ -66,6 +73,8 @@
 }
 
 :root[data-theme='dark'] {
+  color-scheme: dark;
+
   --bg: #14120f;
   --bg-soft: #1c1a15;
   --surface: #211e18;

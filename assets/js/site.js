@@ -64,9 +64,9 @@
 
   /* --- palette ----------------------------------------------------------- */
 
-  function setPalette(id) {
+  function setPalette(id, persist) {
     root.setAttribute('data-palette', id);
-    store(STORE_PALETTE, id);
+    if (persist !== false) store(STORE_PALETTE, id);
     document.querySelectorAll('[data-palette-option]').forEach(function (b) {
       b.setAttribute('aria-checked', String(b.dataset.paletteOption === id));
     });
@@ -121,6 +121,17 @@
       if (!read(STORE_THEME)) setTheme(e.matches ? 'dark' : 'light', false);
     };
     if (mq.addEventListener) mq.addEventListener('change', onChange);
+
+    /* Keep other open tabs in sync. localStorage fires `storage` in every
+       OTHER tab on the same origin when a value changes. Without this, only
+       the tab you clicked in repaints: any tab already open keeps its old
+       theme until it is reloaded, so the site looks like "some pages are on
+       the wrong background". persist:false because the value is already
+       stored — this tab is only catching up to it. */
+    window.addEventListener('storage', function (e) {
+      if (e.key === STORE_THEME && e.newValue) setTheme(e.newValue, false);
+      if (e.key === STORE_PALETTE && e.newValue) setPalette(e.newValue, false);
+    });
 
     // palette menu
     buildPaletteMenu();

@@ -190,6 +190,7 @@ def page(filename, title, description, body, extra_js='', og_type='article'):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>%(title)s</title>
 <meta name="description" content="%(desc)s">
 <link rel="canonical" href="%(base)s/%(canon)s">
