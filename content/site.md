@@ -21,6 +21,22 @@ cv: cv.pdf
 
 news_on_home: 6
 
+# Drifting particle-network background (the particles.js look).
+#   scope:  all | home | off
+#   count:  0 = scale automatically to the viewport (recommended)
+#   speed:  drift speed; 0.32 is a slow, calm drift
+#   grab:   true = the cursor pulls links toward nearby particles
+# Sections with a soft background deliberately cover it, so the effect
+# shows through the open bands rather than sitting behind dense text.
+particles:
+  scope: home
+  count: 0
+  link_distance: 132
+  speed: 0.32
+  grab: true
+  opacity: 0.55
+  opacity_dark: 0.7
+
 nav:
   - {label: Home,          url: index.html}
   - {label: Research,      url: research.html}

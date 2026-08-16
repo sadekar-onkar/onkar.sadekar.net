@@ -192,17 +192,38 @@ html {
   scroll-padding-top: 5.5rem;
 }
 
+/* The page background lives on <html>, not <body>, so the fixed particle
+   layer can sit at z-index:-1 — behind every bit of content but still in
+   front of the page colour. If body kept the background it would paint over
+   the layer and hide it completely. */
+html { background: var(--bg); transition: background-color 0.35s ease; }
+
 body {
   margin: 0;
-  background: var(--bg);
+  background: transparent;
   color: var(--ink);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 1.0625rem;
   line-height: 1.65;
   font-feature-settings: 'kern', 'liga', 'cv11';
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.35s ease, color 0.35s ease;
+  transition: color 0.35s ease;
 }
+
+/* Drifting particle-network background (assets/js/particles.js).
+   Sections with their own --bg-soft fill deliberately cover it, which gives
+   the page a rhythm of open and quiet bands rather than a constant field
+   behind dense text. */
+.particles-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--particles-opacity, 0.55);
+}
+.particles-bg canvas { display: block; width: 100%; height: 100%; }
+:root[data-theme='dark'] .particles-bg { opacity: var(--particles-opacity-dark, 0.7); }
+@media (prefers-reduced-motion: reduce) { .particles-bg { opacity: 0.3; } }
 
 h1, h2, h3, h4 {
   font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;

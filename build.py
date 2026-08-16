@@ -169,6 +169,27 @@ WASH = '''<div class="wash" aria-hidden="true">
       </div>'''
 
 
+def particles_layer(filename):
+    """The drifting particle-network background, per `particles:` in site.md.
+
+    scope: all | home | off  — which pages get the layer.
+    Returns (markup, script_tag); both empty when it is switched off here.
+    """
+    p = SITE.get('particles') or {}
+    scope = str(p.get('scope', 'home')).lower()
+    if scope == 'off' or (scope == 'home' and filename != 'index.html'):
+        return '', ''
+    style = '--particles-opacity:%s; --particles-opacity-dark:%s' % (
+        p.get('opacity', 0.55), p.get('opacity_dark', 0.7))
+    markup = ('<div class="particles-bg" data-particles aria-hidden="true"\n'
+              '     style="%s"\n'
+              '     data-count="%s" data-link-distance="%s" data-speed="%s" data-grab="%s">\n'
+              '  <canvas></canvas>\n</div>\n'
+              % (style, p.get('count', 0), p.get('link_distance', 132),
+                 p.get('speed', 0.32), 'off' if p.get('grab') is False else 'on'))
+    return markup, '<script src="assets/js/particles.js" defer></script>\n'
+
+
 def page(filename, title, description, body, extra_js='', og_type='article'):
     nav_items = '\n'.join(
         '      <li><a href="%s"%s>%s</a></li>' %
@@ -184,6 +205,7 @@ def page(filename, title, description, body, extra_js='', og_type='article'):
         for l in SITE.get('links', []))
 
     canonical = '' if filename == 'index.html' else filename
+    particles_markup, particles_js = particles_layer(filename)
 
     doc = '''<!DOCTYPE html>
 <html lang="en" class="no-js">
@@ -212,7 +234,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
 </script>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+%(particles)s<a class="skip-link" href="#main">Skip to content</a>
 
 <header class="site-header">
   <div class="wrap nav">
@@ -289,7 +311,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
 </footer>
 
 <script src="assets/js/site.js" defer></script>
-%(extrajs)s
+%(particlesjs)s%(extrajs)s
 </body>
 </html>
 ''' % dict(title=e(title), desc=e(description), base=SITE['base_url'], canon=canonical,
@@ -298,7 +320,8 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
            role=e(SITE.get('role', '')), dept=e(SITE.get('department', '')),
            inst=e(SITE.get('institution', '')), footlinks=footer_links,
            elsewhere=elsewhere, email=e(SITE.get('email', '')),
-           year=datetime.date.today().year, extrajs=extra_js)
+           year=datetime.date.today().year, extrajs=extra_js,
+           particles=particles_markup, particlesjs=particles_js)
 
     open(os.path.join(OUT, filename), 'w', encoding='utf-8').write(doc)
     return len(doc)
@@ -538,7 +561,6 @@ def build_home():
         for l in SITE.get('contact', []))
 
     body_html = '''  <section class="hero">
-    <div class="hero-bg" data-network="ambient" aria-hidden="true"><canvas></canvas></div>
     <div class="wrap">
       <div class="hero-grid">
         <div>
