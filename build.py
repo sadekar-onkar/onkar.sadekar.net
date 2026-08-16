@@ -233,7 +233,7 @@ document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-colo
 if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
 </script>
 </head>
-<body>
+<body%(bodyclass)s>
 %(particles)s<a class="skip-link" href="#main">Skip to content</a>
 
 <header class="site-header">
@@ -321,7 +321,8 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
            inst=e(SITE.get('institution', '')), footlinks=footer_links,
            elsewhere=elsewhere, email=e(SITE.get('email', '')),
            year=datetime.date.today().year, extrajs=extra_js,
-           particles=particles_markup, particlesjs=particles_js)
+           particles=particles_markup, particlesjs=particles_js,
+           bodyclass=' class="has-particles"' if particles_markup else '')
 
     open(os.path.join(OUT, filename), 'w', encoding='utf-8').write(doc)
     return len(doc)

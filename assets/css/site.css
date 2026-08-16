@@ -211,9 +211,8 @@ body {
 }
 
 /* Drifting particle-network background (assets/js/particles.js).
-   Sections with their own --bg-soft fill deliberately cover it, which gives
-   the page a rhythm of open and quiet bands rather than a constant field
-   behind dense text. */
+   The layer is fixed to the viewport and sits behind everything, so the
+   field is continuous down the whole page as you scroll. */
 .particles-bg {
   position: fixed;
   inset: 0;
@@ -224,6 +223,20 @@ body {
 .particles-bg canvas { display: block; width: 100%; height: 100%; }
 :root[data-theme='dark'] .particles-bg { opacity: var(--particles-opacity-dark, 0.7); }
 @media (prefers-reduced-motion: reduce) { .particles-bg { opacity: 0.3; } }
+
+/* The alternating soft bands and the footer are opaque by default, which
+   would mask the fixed layer everywhere except the hero — making the
+   particles look like a header decoration rather than a page background.
+   When the layer is present, tint them instead of filling them so the field
+   stays visible the whole way down. Cards keep their solid --surface fill:
+   text needs an opaque backing to stay readable. */
+.has-particles .section--soft,
+.has-particles .site-footer {
+  background: color-mix(in srgb, var(--bg-soft) 62%, transparent);
+}
+.has-particles .callout {
+  background: color-mix(in srgb, var(--bg-soft) 70%, transparent);
+}
 
 h1, h2, h3, h4 {
   font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
