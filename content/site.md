@@ -29,12 +29,12 @@ news_on_home: 6
 # Sections with a soft background deliberately cover it, so the effect
 # shows through the open bands rather than sitting behind dense text.
 particles:
-  scope: home
+  scope: all
   count: 0
-  link_distance: 132
-  speed: 0.32
+  link_distance: 150
+  speed: 0.2
   grab: true
-  opacity: 0.55
+  opacity: 0.6
   opacity_dark: 0.7
 
 nav:
