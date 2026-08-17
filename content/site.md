@@ -31,10 +31,10 @@ news_on_home: 6
 particles:
   scope: all
   count: 0
-  link_distance: 150
-  speed: 0.2
+  link_distance: 100
+  speed: 0.1
   grab: true
-  opacity: 0.6
+  opacity: 0.4
   opacity_dark: 0.7
 
 nav:
