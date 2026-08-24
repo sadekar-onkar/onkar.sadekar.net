@@ -235,5 +235,19 @@
     document.querySelectorAll('[data-year]').forEach(function (el) {
       el.textContent = String(new Date().getFullYear());
     });
+
+    // Bipartite diagram (publications page): the per-concept highlight is
+    // pure CSS :hover, which never fires on touch. A tap toggles the same
+    // `.bip-tap-active` class the generated <style> also matches (see
+    // bipartite_svg() in build.py), so touch gets the same dimming effect
+    // a mouse hover gets, with a second tap to clear it.
+    document.querySelectorAll('svg.bip').forEach(function (svg) {
+      svg.addEventListener('click', function (e) {
+        var g = e.target.closest('.bip-concept');
+        var active = svg.querySelector('.bip-tap-active');
+        if (active) active.classList.remove('bip-tap-active');
+        if (g && g !== active) g.classList.add('bip-tap-active');
+      });
+    });
   });
 })();

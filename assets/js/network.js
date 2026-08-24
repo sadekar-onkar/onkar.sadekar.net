@@ -524,9 +524,16 @@
         if (dragging) {
           canvas.setPointerCapture(e.pointerId);
           dragging.dragStart = p;
+          // Touch has no hover, so pointermove never shows a tip before the
+          // tap fires — show it the instant the finger lands instead.
+          if (e.pointerType === 'touch') { showTip(dragging); repaint(); }
           start();
         } else {
           downPoint = p;
+          if (e.pointerType === 'touch') {
+            var edge = edgeAt(p.x, p.y);
+            if (edge) { showTip(tipForEdge(edge)); repaint(); }
+          }
         }
       });
 

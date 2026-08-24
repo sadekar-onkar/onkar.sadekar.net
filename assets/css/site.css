@@ -960,6 +960,21 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 3rem 0; }
   overflow: hidden;
 }
 .bipfig-scroll { overflow-x: auto; padding: 1.25rem 0.5rem 0.5rem; }
+.bipfig-hint {
+  display: none;
+  margin: 0;
+  padding: 0.5rem 1rem 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+}
+/* The diagram has a fixed min-width (see svg.bip) and always needs a
+   sideways scroll below this breakpoint — without this hint that reads as
+   the figure being cut off rather than scrollable. */
+@media (max-width: 46rem) {
+  .bipfig-hint { display: block; }
+}
 .bipfig figcaption {
   border-top: 1px solid var(--line);
   background: var(--bg-soft);
@@ -1241,7 +1256,7 @@ svg.bip {
   font-size: 0.68rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-2);
+  color: var(--ink);
   margin-bottom: 0.9rem;
   font-weight: 500;
 }
@@ -1307,6 +1322,12 @@ svg.bip {
 
   .linklist a { flex-wrap: wrap; }
   .ll-key { width: auto; }
+
+  /* The collaborators graph packs the same node count into whatever height
+     it gets; on a phone-width viewport the 42vw formula clamps to the
+     17rem floor while the width shrinks, so nodes end up crowded and hard
+     to tap accurately. Give it more vertical room instead. */
+  .netfig canvas { height: 24rem; }
 }
 
 /* 10. Motion & print ------------------------------------------------------ */

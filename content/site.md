@@ -6,14 +6,14 @@ short_name: O. Sadekar          # how your name appears in author lists (gets bo
 title: Onkar Sadekar — Network scientist
 description: >-
   Onkar Sadekar is a postdoctoral researcher at the University of Zurich studying
-  higher-order networks, the evolution of cooperation, and collective human behaviour.
+  evolutionary game theory, cultural evolution, and human behaviour.
 base_url: https://onkar.sadekar.net
 
 eyebrow: Network science · Zürich
-role: Postdoctoral researcher
+role: Postdoctoral Researcher
 department: Department of Evolutionary Anthropology
 institution: University of Zürich, Switzerland
-email: onkar.sadekar@uzh.ch
+email: sadekaronkar@gmail.com
 
 # Files: drop replacements into files/ with these names. Nothing else to change.
 photo: photo.jpg
@@ -52,7 +52,7 @@ links:
   - {label: arXiv,          url: "https://arxiv.org/a/sadekar_o_1"}
 
 contact:
-  - {label: Email,   icon: email,   url: "mailto:onkar.sadekar@uzh.ch", text: onkar.sadekar@uzh.ch}
+  - {label: Email,   icon: email,   url: "mailto:sadekaronkar@gmail.com", text: sadekaronkar@gmail.com}
   - {label: Scholar, icon: scholar, url: "https://scholar.google.com/citations?user=wRgJdSoAAAAJ", text: Google Scholar profile}
   - {label: GitHub,  icon: github,  url: "https://github.com/sadekar-onkar", text: sadekar-onkar}
   - {label: arXiv,   icon: arxiv,   url: "https://arxiv.org/a/sadekar_o_1", text: Preprints}

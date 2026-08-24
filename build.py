@@ -501,12 +501,19 @@ def bipartite_svg(papers, concept_labels):
 
     parts.append('</svg>')
 
+    # .bip-tap-active is a plain class, toggled by site.js on click/tap —
+    # touch has no :hover, so this is what gives touch the same highlight.
     hover = '\n'.join(
         'svg.bip:has(.c-%s:hover) .bip-edge:not(.e-%s),'
-        'svg.bip:has(.c-%s:hover) .bip-paper:not(.e-%s){opacity:.12}' % (c, c, c, c)
+        'svg.bip:has(.c-%s:hover) .bip-paper:not(.e-%s),'
+        'svg.bip:has(.c-%s.bip-tap-active) .bip-edge:not(.e-%s),'
+        'svg.bip:has(.c-%s.bip-tap-active) .bip-paper:not(.e-%s){opacity:.12}'
+        % (c, c, c, c, c, c, c, c)
         for c in used)
 
-    return ('      <figure class="bipfig">\n        <div class="bipfig-scroll">%s</div>\n'
+    return ('      <figure class="bipfig">\n'
+            '        <p class="bipfig-hint">Swipe to explore &rarr;</p>\n'
+            '        <div class="bipfig-scroll">%s</div>\n'
             '        <figcaption>Every paper and the ideas it uses. '
             'Hover a concept on the left to pick out its papers.</figcaption>\n'
             '      </figure>\n      <style>%s</style>\n' % (''.join(parts), hover))

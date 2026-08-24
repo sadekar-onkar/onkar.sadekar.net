@@ -19,16 +19,15 @@ contact_lede: >-
 
 ## About
 
-Most of network science is built on pairs — two people, one link. But much of
-what people actually do happens in *groups*: a team, a hunting party, a
-committee, a village.
+I like to study human behaviour — why people cooperate, how culture takes hold
+and spreads, and what shapes the choices groups make together.
 
-My research asks what changes when you model those group interactions directly,
-using **higher-order networks**, and what that means for one of the oldest
-questions in the social sciences: why do people cooperate at all? It turns out
-the answer depends a great deal on the shape of the groups you belong to —
-sometimes so sharply that cooperation appears all at once, in an explosive
-transition.
+Three things I keep coming back to: **evolutionary game theory**, and what it
+takes for cooperation to survive as the rules of the game change; **evolutionary
+anthropology and cultural evolution**, especially how connected a population
+needs to be for culture to accumulate; and **sports and team dynamics**, where
+the data is good enough to actually test an idea about how individuals and
+groups perform together.
 
 I came to this from statistical physics, which is where I started: stochastic
 processes, active matter, systems held far from equilibrium. I still like
@@ -51,31 +50,24 @@ Indian Institute of Science Education and Research (IISER), Pune.
 
 ## Themes
 
-### Higher-order networks & cooperation
-url: research.html#higher-order
-chips: Evolutionary game theory, Hypergraphs
+### Evolutionary game theory
+url: research.html#game-theory
+chips: Cooperation, Public goods games
 
-What happens to the evolution of cooperation when interactions involve whole
-groups rather than pairs — and why that can produce abrupt, explosive
-transitions.
+What it takes for cooperation to survive as the rules of the game change — from
+classic two-player dilemmas to the group dilemmas of public goods and common
+resources.
 
-### Collective human behaviour
-url: research.html#collective
-chips: Social dynamics, Synthesis
-
-How group structure shapes what people decide, learn and do together, pulling
-together evidence from physics, psychology and the social sciences.
-
-### Cultural evolution & social structure
+### Evolutionary anthropology & cultural evolution
 url: research.html#culture
 chips: Evolutionary anthropology, Fieldwork data
 
 Why some populations accumulate culture and others do not — in chimpanzees, and
 in contemporary hunter-gatherer societies.
 
-### Statistical physics & networks in the wild
-url: research.html#statphys
-chips: Stochastic processes, Sports analytics
+### Sports & team dynamics
+url: research.html#applied
+chips: Sports analytics, Team performance
 
-Nonequilibrium stochastic processes — resetting, active matter, transport — and
-network methods applied to sport and epidemics.
+Separating individual skill from team context — in cricket, in basketball, and
+in other problems where the data is good enough to actually test an idea.

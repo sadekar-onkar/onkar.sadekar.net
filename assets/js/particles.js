@@ -188,13 +188,25 @@
     if (document.hidden) stop(); else start();
   });
 
-  var rt;
+  // Mobile browsers change the viewport *height* (not width) as the address
+  // bar shows/hides while the page scrolls, which fires `resize` constantly.
+  // Rebuilding the whole field on every one of those made the background
+  // visibly jump mid-scroll. `resize()` still re-fits the canvas to
+  // whatever box it now has (particles just wrap into it, see step()) —
+  // only `build()`, which respawns every particle at a random position, is
+  // gated on the width actually changing.
+  var rt, lastW = null;
   window.addEventListener('resize', function () {
     clearTimeout(rt);
-    rt = setTimeout(function () { resize(); build(); if (reduced) draw(); }, 150);
+    rt = setTimeout(function () {
+      resize();
+      if (lastW === null || W !== lastW) { lastW = W; build(); }
+      if (reduced) draw();
+    }, 150);
   }, { passive: true });
 
   resize();
+  lastW = W;
   build();
   if (reduced) draw(); else start();
 })();
