@@ -22,11 +22,17 @@ content/
   code.md            repositories
   cv.md              CV sections
   404.md
+  workshop.md        the published workshop network (prose)
+  workshop.json      the workshop vote data — absent until a workshop happens
+  vote.md            wording for the attendee voting screen
+  wsadmin.md         wording for the workshop control screen
 files/
   photo.jpg          just replace it
   cv.pdf             just replace it
 assets/              css, js, fonts, favicon — design, not content
 build.py             content/ + files/  ->  _site/
+workshop-api/        the Cloudflare Worker; NOT part of the site (see below)
+tests/               ./tests/run.sh — the workshop maths and rendering
 _site/               build output; gitignored, never committed
 ```
 
@@ -118,7 +124,13 @@ both pages in both modes.
   CSS `:has()`, which simply does nothing in browsers that lack it.
 - **collaborators** — canvas, `data-network="collab"`. Reads the `.collab`
   entries from the page. Clicking a person fills the panel above the list.
-- **home** — `data-network="ambient"`, decorative only, `pointer-events: none`.
+- **workshop** — canvas, `data-network="workshop"`. The person-person projection
+  of the workshop votes. Unlike collab it reads a JSON blob, not the DOM,
+  because the thresholding is interactive. See "The workshop" below.
+- **ambient** — `data-network="ambient"`. Currently **unused**: the home page
+  switched to `particles.js` and the markup went with it, so `buildAmbient()`
+  and the `.hero-bg` CSS are orphaned. `network.js` is still loaded on
+  index.html where it has nothing to bind to.
 
 Two things in `network.js` are deliberate and should not be "fixed":
 
@@ -130,6 +142,59 @@ Two things in `network.js` are deliberate and should not be "fixed":
 
 Labels are placed largest-first with collision detection; any that would overlap
 one already placed is dropped.
+
+## The workshop
+
+Three pages that let a room vote on topics during a workshop and turn the result
+into a published network. Added September 2026.
+
+**The shape of it.** GitHub Pages serves files and executes nothing, so it
+cannot accept a vote — the same wall the private-area idea hit (see "Not
+planned"). So the system is split in two:
+
+- **Live, throwaway.** `vote.html` (phones) and `wsadmin.html` (Onkar's laptop)
+  talk to a Cloudflare Worker in `workshop-api/`. Both are `noindex`, neither is
+  in `nav:`, and neither holds any data.
+- **Permanent, static.** At the end you freeze, export `content/workshop.json`,
+  commit, and `workshop.html` renders it with no network calls at all. **The
+  Worker can then be deleted and the page still works.** That is the whole
+  design: the external dependency is temporary by construction.
+
+`workshop.html` falls back to fetching `/export` when `content/workshop.json` is
+absent, which is what lets the network go live the moment you click Freeze,
+without waiting for a commit and a CI run. `/export` only opens to the public
+once frozen.
+
+**Switching it off.** `workshop.api` in `content/site.md` is empty by default;
+the pages then say they are not configured. Nothing else on the site is
+affected, and no other page ever gets the API `<meta>` — the
+zero-third-party-request rule still holds everywhere else.
+
+**The maths** is in `assets/js/projection.js`, and it is the part worth being
+careful with. A one-mode projection of a bipartite graph is dense and
+hub-driven: raw co-occurrence makes whoever ticked the most boxes look like the
+centre of the room. Three views ship behind a toggle — raw count, Jaccard, and
+a statistically validated network (hypergeometric test per pair,
+Benjamini-Hochberg across all pairs; Tumminello et al. 2011). **Expect the
+validated view to keep zero edges on a short ballot** — with 13 categories even
+a perfect overlap cannot clear the corrected threshold, and the page says so in
+those words rather than showing an empty canvas. That is a fact about the ballot
+length, not a bug; do not "fix" it by dropping the correction.
+
+Run `./tests/run.sh` after touching any of this. The hypergeometric tail is
+checked against exact rational arithmetic in Python, and BH against the worked
+example in the 1995 paper.
+
+**Privacy is enforced at build time, not render time.** `anonymise()` in
+build.py strips the names of people who withheld consent *before* the JSON is
+written into the page, and re-keys every person id in a salted order — seeded
+ids are positional, so `p07` is the seventh name on an alphabetical roster and
+anyone holding that roster could otherwise just count. The roster itself is
+never committed: it lives in `workshop-api/roster.txt` (gitignored) and the
+phones fetch it from the API. Published links carry a count only, never which
+categories a pair shares.
+
+`workshop-api/README.md` has the deploy steps and the day-of runbook.
 
 ## Content still to verify
 
@@ -148,3 +213,8 @@ configure, so real access control there needs Cloudflare Access, Netlify, or
 self-hosting. (Tiago Peixoto's skewed.de does it with Apache HTTP Basic Auth on
 his own box — not something that ports to Pages.) Do not build one without being
 asked again.
+
+The workshop Worker is **not** a precedent for this. It accepts writes for one
+day and is deleted; it guards nothing and serves no page. Access control would
+have to be permanent and sit in front of the whole site, which is a different
+problem with a different answer.

@@ -1,0 +1,7 @@
+# One attendee per line. Blank lines and # comments are ignored.
+# Copy to roster.txt (gitignored) and edit. Names appear exactly as typed,
+# so use the form people will recognise on a phone screen.
+# Do NOT reorder after voting starts: ids are positional.
+Ada Lovelace
+Alan Turing
+Grace Hopper

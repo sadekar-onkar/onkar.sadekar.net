@@ -1,0 +1,875 @@
+{
+ "workshop": "Fixture workshop (synthetic test data)",
+ "date": "2026-09-20",
+ "frozen_at": "2026-09-20T17:00:00Z",
+ "state": "frozen",
+ "people": [
+  {
+   "id": "p01",
+   "name": "Ada Lovelace",
+   "consent": true
+  },
+  {
+   "id": "p02",
+   "name": "Alan Turing",
+   "consent": true
+  },
+  {
+   "id": "p03",
+   "name": "Grace Hopper",
+   "consent": true
+  },
+  {
+   "id": "p04",
+   "name": "Barbara Liskov",
+   "consent": true
+  },
+  {
+   "id": "p05",
+   "name": "Donald Knuth",
+   "consent": true
+  },
+  {
+   "id": "p06",
+   "name": "Edsger Dijkstra",
+   "consent": false
+  },
+  {
+   "id": "p07",
+   "name": "Frances Allen",
+   "consent": true
+  },
+  {
+   "id": "p08",
+   "name": "John McCarthy",
+   "consent": true
+  },
+  {
+   "id": "p09",
+   "name": "Karen Sparck Jones",
+   "consent": false
+  },
+  {
+   "id": "p10",
+   "name": "Leslie Lamport",
+   "consent": true
+  },
+  {
+   "id": "p11",
+   "name": "Margaret Hamilton",
+   "consent": true
+  },
+  {
+   "id": "p12",
+   "name": "Niklaus Wirth",
+   "consent": false
+  },
+  {
+   "id": "p13",
+   "name": "Peter Naur",
+   "consent": true
+  },
+  {
+   "id": "p14",
+   "name": "Radia Perlman",
+   "consent": true
+  },
+  {
+   "id": "p15",
+   "name": "Robert Tarjan",
+   "consent": true
+  },
+  {
+   "id": "p16",
+   "name": "Shafi Goldwasser",
+   "consent": true
+  },
+  {
+   "id": "p17",
+   "name": "Silvio Micali",
+   "consent": true
+  },
+  {
+   "id": "p18",
+   "name": "Tony Hoare",
+   "consent": true
+  },
+  {
+   "id": "p19",
+   "name": "Vint Cerf",
+   "consent": false
+  },
+  {
+   "id": "p20",
+   "name": "Whitfield Diffie",
+   "consent": true
+  },
+  {
+   "id": "p21",
+   "name": "Andrei Broder",
+   "consent": false
+  },
+  {
+   "id": "p22",
+   "name": "Jon Kleinberg",
+   "consent": false
+  },
+  {
+   "id": "p23",
+   "name": "Duncan Watts",
+   "consent": true
+  },
+  {
+   "id": "p24",
+   "name": "Steven Strogatz",
+   "consent": true
+  },
+  {
+   "id": "p25",
+   "name": "Mark Newman",
+   "consent": true
+  },
+  {
+   "id": "p26",
+   "name": "Albert Barabasi",
+   "consent": true
+  },
+  {
+   "id": "p27",
+   "name": "Reka Albert",
+   "consent": true
+  },
+  {
+   "id": "p28",
+   "name": "Santo Fortunato",
+   "consent": true
+  },
+  {
+   "id": "p29",
+   "name": "Tiago Peixoto",
+   "consent": false
+  },
+  {
+   "id": "p30",
+   "name": "Aaron Clauset",
+   "consent": true
+  },
+  {
+   "id": "p31",
+   "name": "Cristopher Moore",
+   "consent": true
+  },
+  {
+   "id": "p32",
+   "name": "Elizabeth Bruch",
+   "consent": true
+  },
+  {
+   "id": "p33",
+   "name": "Damon Centola",
+   "consent": true
+  },
+  {
+   "id": "p34",
+   "name": "Nicholas Christakis",
+   "consent": false
+  }
+ ],
+ "categories": [
+  {
+   "id": "c01",
+   "label": "Cooperation",
+   "live": false
+  },
+  {
+   "id": "c02",
+   "label": "Cultural evolution",
+   "live": false
+  },
+  {
+   "id": "c03",
+   "label": "Network structure",
+   "live": false
+  },
+  {
+   "id": "c04",
+   "label": "Game theory",
+   "live": false
+  },
+  {
+   "id": "c05",
+   "label": "Human behaviour",
+   "live": false
+  },
+  {
+   "id": "c06",
+   "label": "Epidemics",
+   "live": false
+  },
+  {
+   "id": "c07",
+   "label": "Inference",
+   "live": false
+  },
+  {
+   "id": "c08",
+   "label": "Higher-order networks",
+   "live": false
+  },
+  {
+   "id": "c09",
+   "label": "Field experiments",
+   "live": false
+  },
+  {
+   "id": "c10",
+   "label": "Agent-based models",
+   "live": false
+  },
+  {
+   "id": "c11",
+   "label": "Reproducibility",
+   "live": true
+  },
+  {
+   "id": "c12",
+   "label": "Ethics of field work",
+   "live": true
+  },
+  {
+   "id": "c13",
+   "label": "LLMs in social science",
+   "live": true
+  }
+ ],
+ "votes": [
+  [
+   "p01",
+   "c01"
+  ],
+  [
+   "p01",
+   "c02"
+  ],
+  [
+   "p01",
+   "c05"
+  ],
+  [
+   "p01",
+   "c09"
+  ],
+  [
+   "p01",
+   "c10"
+  ],
+  [
+   "p02",
+   "c01"
+  ],
+  [
+   "p02",
+   "c02"
+  ],
+  [
+   "p02",
+   "c03"
+  ],
+  [
+   "p02",
+   "c04"
+  ],
+  [
+   "p02",
+   "c06"
+  ],
+  [
+   "p02",
+   "c08"
+  ],
+  [
+   "p02",
+   "c10"
+  ],
+  [
+   "p03",
+   "c07"
+  ],
+  [
+   "p03",
+   "c10"
+  ],
+  [
+   "p03",
+   "c11"
+  ],
+  [
+   "p03",
+   "c13"
+  ],
+  [
+   "p04",
+   "c01"
+  ],
+  [
+   "p04",
+   "c05"
+  ],
+  [
+   "p04",
+   "c09"
+  ],
+  [
+   "p05",
+   "c01"
+  ],
+  [
+   "p05",
+   "c02"
+  ],
+  [
+   "p05",
+   "c03"
+  ],
+  [
+   "p05",
+   "c04"
+  ],
+  [
+   "p05",
+   "c05"
+  ],
+  [
+   "p05",
+   "c06"
+  ],
+  [
+   "p05",
+   "c07"
+  ],
+  [
+   "p05",
+   "c08"
+  ],
+  [
+   "p05",
+   "c09"
+  ],
+  [
+   "p05",
+   "c10"
+  ],
+  [
+   "p05",
+   "c11"
+  ],
+  [
+   "p06",
+   "c06"
+  ],
+  [
+   "p06",
+   "c07"
+  ],
+  [
+   "p06",
+   "c08"
+  ],
+  [
+   "p06",
+   "c10"
+  ],
+  [
+   "p06",
+   "c11"
+  ],
+  [
+   "p06",
+   "c13"
+  ],
+  [
+   "p07",
+   "c01"
+  ],
+  [
+   "p07",
+   "c02"
+  ],
+  [
+   "p07",
+   "c09"
+  ],
+  [
+   "p08",
+   "c03"
+  ],
+  [
+   "p08",
+   "c08"
+  ],
+  [
+   "p09",
+   "c07"
+  ],
+  [
+   "p09",
+   "c11"
+  ],
+  [
+   "p09",
+   "c13"
+  ],
+  [
+   "p10",
+   "c01"
+  ],
+  [
+   "p10",
+   "c02"
+  ],
+  [
+   "p10",
+   "c06"
+  ],
+  [
+   "p10",
+   "c12"
+  ],
+  [
+   "p11",
+   "c02"
+  ],
+  [
+   "p11",
+   "c03"
+  ],
+  [
+   "p11",
+   "c04"
+  ],
+  [
+   "p11",
+   "c11"
+  ],
+  [
+   "p11",
+   "c12"
+  ],
+  [
+   "p12",
+   "c07"
+  ],
+  [
+   "p12",
+   "c10"
+  ],
+  [
+   "p12",
+   "c12"
+  ],
+  [
+   "p13",
+   "c01"
+  ],
+  [
+   "p13",
+   "c04"
+  ],
+  [
+   "p13",
+   "c05"
+  ],
+  [
+   "p13",
+   "c09"
+  ],
+  [
+   "p13",
+   "c13"
+  ],
+  [
+   "p14",
+   "c04"
+  ],
+  [
+   "p14",
+   "c08"
+  ],
+  [
+   "p15",
+   "c06"
+  ],
+  [
+   "p15",
+   "c07"
+  ],
+  [
+   "p15",
+   "c10"
+  ],
+  [
+   "p15",
+   "c11"
+  ],
+  [
+   "p15",
+   "c13"
+  ],
+  [
+   "p16",
+   "c01"
+  ],
+  [
+   "p16",
+   "c02"
+  ],
+  [
+   "p16",
+   "c03"
+  ],
+  [
+   "p16",
+   "c05"
+  ],
+  [
+   "p16",
+   "c09"
+  ],
+  [
+   "p16",
+   "c10"
+  ],
+  [
+   "p17",
+   "c03"
+  ],
+  [
+   "p17",
+   "c04"
+  ],
+  [
+   "p17",
+   "c06"
+  ],
+  [
+   "p17",
+   "c08"
+  ],
+  [
+   "p17",
+   "c12"
+  ],
+  [
+   "p18",
+   "c07"
+  ],
+  [
+   "p18",
+   "c10"
+  ],
+  [
+   "p18",
+   "c13"
+  ],
+  [
+   "p19",
+   "c01"
+  ],
+  [
+   "p19",
+   "c02"
+  ],
+  [
+   "p19",
+   "c05"
+  ],
+  [
+   "p19",
+   "c09"
+  ],
+  [
+   "p20",
+   "c01"
+  ],
+  [
+   "p20",
+   "c02"
+  ],
+  [
+   "p20",
+   "c03"
+  ],
+  [
+   "p20",
+   "c04"
+  ],
+  [
+   "p20",
+   "c05"
+  ],
+  [
+   "p20",
+   "c06"
+  ],
+  [
+   "p20",
+   "c07"
+  ],
+  [
+   "p20",
+   "c08"
+  ],
+  [
+   "p20",
+   "c09"
+  ],
+  [
+   "p20",
+   "c10"
+  ],
+  [
+   "p20",
+   "c11"
+  ],
+  [
+   "p21",
+   "c02"
+  ],
+  [
+   "p21",
+   "c07"
+  ],
+  [
+   "p21",
+   "c08"
+  ],
+  [
+   "p21",
+   "c10"
+  ],
+  [
+   "p21",
+   "c11"
+  ],
+  [
+   "p22",
+   "c01"
+  ],
+  [
+   "p22",
+   "c02"
+  ],
+  [
+   "p22",
+   "c05"
+  ],
+  [
+   "p22",
+   "c09"
+  ],
+  [
+   "p23",
+   "c04"
+  ],
+  [
+   "p23",
+   "c06"
+  ],
+  [
+   "p23",
+   "c08"
+  ],
+  [
+   "p23",
+   "c09"
+  ],
+  [
+   "p24",
+   "c07"
+  ],
+  [
+   "p24",
+   "c13"
+  ],
+  [
+   "p25",
+   "c01"
+  ],
+  [
+   "p25",
+   "c02"
+  ],
+  [
+   "p25",
+   "c04"
+  ],
+  [
+   "p25",
+   "c05"
+  ],
+  [
+   "p25",
+   "c11"
+  ],
+  [
+   "p26",
+   "c04"
+  ],
+  [
+   "p26",
+   "c06"
+  ],
+  [
+   "p26",
+   "c08"
+  ],
+  [
+   "p26",
+   "c12"
+  ],
+  [
+   "p26",
+   "c13"
+  ],
+  [
+   "p27",
+   "c04"
+  ],
+  [
+   "p27",
+   "c05"
+  ],
+  [
+   "p27",
+   "c07"
+  ],
+  [
+   "p27",
+   "c12"
+  ],
+  [
+   "p28",
+   "c01"
+  ],
+  [
+   "p28",
+   "c02"
+  ],
+  [
+   "p28",
+   "c04"
+  ],
+  [
+   "p28",
+   "c09"
+  ],
+  [
+   "p29",
+   "c03"
+  ],
+  [
+   "p29",
+   "c04"
+  ],
+  [
+   "p29",
+   "c06"
+  ],
+  [
+   "p30",
+   "c07"
+  ],
+  [
+   "p30",
+   "c11"
+  ],
+  [
+   "p30",
+   "c12"
+  ],
+  [
+   "p30",
+   "c13"
+  ],
+  [
+   "p31",
+   "c02"
+  ],
+  [
+   "p31",
+   "c05"
+  ],
+  [
+   "p31",
+   "c07"
+  ],
+  [
+   "p31",
+   "c08"
+  ],
+  [
+   "p31",
+   "c09"
+  ],
+  [
+   "p31",
+   "c12"
+  ],
+  [
+   "p32",
+   "c03"
+  ],
+  [
+   "p32",
+   "c04"
+  ],
+  [
+   "p32",
+   "c06"
+  ],
+  [
+   "p32",
+   "c08"
+  ],
+  [
+   "p32",
+   "c11"
+  ],
+  [
+   "p32",
+   "c13"
+  ],
+  [
+   "p33",
+   "c01"
+  ],
+  [
+   "p33",
+   "c07"
+  ],
+  [
+   "p33",
+   "c10"
+  ],
+  [
+   "p33",
+   "c13"
+  ],
+  [
+   "p34",
+   "c01"
+  ],
+  [
+   "p34",
+   "c02"
+  ],
+  [
+   "p34",
+   "c04"
+  ],
+  [
+   "p34",
+   "c05"
+  ]
+ ]
+}

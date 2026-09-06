@@ -1,0 +1,20 @@
+name = "workshop-api"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# The database. Create it once with:
+#   wrangler d1 create workshop
+# then paste the returned id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "workshop"
+database_id = "PASTE_THE_ID_FROM_WRANGLER_D1_CREATE"
+
+[vars]
+# Comma-separated. The first entry is the fallback for non-matching origins.
+# Add the local preview origin only while testing.
+ALLOWED_ORIGINS = "https://onkar.sadekar.net,http://localhost:8000"
+
+# JOIN_CODE and ADMIN_TOKEN are secrets, never vars. Set them with:
+#   wrangler secret put JOIN_CODE
+#   wrangler secret put ADMIN_TOKEN

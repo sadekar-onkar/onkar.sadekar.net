@@ -20,7 +20,7 @@ Dependencies (build-time only — the site it emits is plain HTML/CSS/JS with
 no runtime dependencies at all): markdown, pyyaml.
 """
 
-import os, re, sys, shutil, html, datetime, math
+import os, re, sys, shutil, html, datetime, math, json, hashlib
 
 try:
     import yaml, markdown as md_lib
@@ -190,7 +190,7 @@ def particles_layer(filename):
     return markup, '<script src="assets/js/particles.js" defer></script>\n'
 
 
-def page(filename, title, description, body, extra_js='', og_type='article'):
+def page(filename, title, description, body, extra_js='', og_type='article', head_extra=''):
     nav_items = '\n'.join(
         '      <li><a href="%s"%s>%s</a></li>' %
         (n['url'], ' aria-current="page"' if n['url'] == filename else '', e(n['label']))
@@ -226,7 +226,7 @@ def page(filename, title, description, body, extra_js='', og_type='article'):
 <link rel="preload" href="assets/fonts/SpaceGrotesk-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/Inter-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/css/site.css">
-<script>
+%(headextra)s<script>
 /* Apply the saved theme + palette before first paint (no flash of wrong colours). */
 (function(){try{var t=localStorage.getItem('theme-v2'),p=localStorage.getItem('palette-v2');
 document.documentElement.setAttribute('data-theme',t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
@@ -321,7 +321,7 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
            inst=e(SITE.get('institution', '')), footlinks=footer_links,
            elsewhere=elsewhere, email=e(SITE.get('email', '')),
            year=datetime.date.today().year, extrajs=extra_js,
-           particles=particles_markup, particlesjs=particles_js,
+           particles=particles_markup, particlesjs=particles_js, headextra=head_extra,
            bodyclass=' class="has-particles"' if particles_markup else '')
 
     open(os.path.join(OUT, filename), 'w', encoding='utf-8').write(doc)
@@ -854,6 +854,297 @@ def build_cv():
     return page('cv.html', meta.get('page_title', 'CV'), meta.get('description', ''), out)
 
 
+# -------------------------------------------------------------- workshop ---
+
+# The three workshop pages. vote/ wsadmin are live-only scaffolding: they hold
+# no data, talk to the API in workshop.api, and are marked noindex. workshop is
+# the permanent artefact and, once content/workshop.json exists, needs no
+# network at all.
+
+def workshop_api_meta():
+    api = (SITE.get('workshop') or {}).get('api', '')
+    return '<meta name="workshop-api" content="%s">\n' % e(api) if api else ''
+
+
+NOINDEX = '<meta name="robots" content="noindex, nofollow">\n'
+
+
+def embed_json(data, element_id):
+    """Inline a JSON blob for the page to read.
+
+    `</script>` inside a string would end the element early, so every `<` is
+    escaped. That is valid JSON and valid inside a script element.
+    """
+    text = json.dumps(data, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c')
+    return ('      <script type="application/json" id="%s">%s</script>\n'
+            % (element_id, text))
+
+
+def anonymise(data):
+    """Strip identity from the data BEFORE it is written into the page.
+
+    projection.js also renders non-consenting people as "Anonymous N", but that
+    is only a display decision — the real name would still be sitting in the
+    page source for anyone who opened view-source. This is where the name
+    actually goes away.
+
+    Ids are re-keyed too. Seeded ids are assigned in roster order, so p07 is
+    the seventh name on the alphabetical attendee list; anyone holding that
+    list could undo the anonymisation by counting. Re-keying in a salted order
+    destroys that. The salt is derived from the workshop itself so rebuilds
+    stay stable — the same input always produces the same published network.
+    """
+    people = data.get('people', [])
+    salt = (str(data.get('workshop', '')) + str(data.get('date', ''))).encode('utf-8')
+
+    def h(pid):
+        return hashlib.sha256(salt + pid.encode('utf-8')).hexdigest()
+
+    order = sorted(people, key=lambda p: h(p['id']))
+    remap = {p['id']: 'n%02d' % (i + 1) for i, p in enumerate(order)}
+
+    out_people = []
+    for p in order:
+        consent = bool(p.get('consent'))
+        out_people.append({
+            'id': remap[p['id']],
+            # the name survives only with consent; otherwise it is not written
+            'name': p['name'] if consent else '',
+            'consent': consent,
+        })
+
+    votes = [[remap[a], b] for a, b in data.get('votes', []) if a in remap]
+    return dict(data, people=out_people, votes=votes)
+
+
+def build_workshop():
+    """The permanent artefact: the person-person projection of the votes."""
+    meta, body = read('workshop.md')
+    path = os.path.join(CONTENT, 'workshop.json')
+    data = {}
+    if os.path.exists(path):
+        raw = open(path, encoding='utf-8').read().strip()
+        if raw:
+            data = anonymise(json.loads(raw))
+
+    n_people = len(data.get('people', []))
+    n_cats = len(data.get('categories', []))
+    named = sum(1 for p in data.get('people', []) if p.get('consent'))
+
+    out = page_head(meta.get('eyebrow', 'Workshop'),
+                    meta.get('title', 'Workshop network'), meta.get('lede', ''))
+
+    out += '  <section class="section">\n    <div class="wrap">\n'
+    out += '      <div class="ws-figwrap" data-workshop>\n'
+
+    # controls
+    out += ('        <div class="ws-controls">\n'
+            '          <div class="ws-methods" role="group" aria-label="How to draw a link">\n')
+    for key, label, on in (('count', 'Shared count', False),
+                           ('jaccard', 'Jaccard', True),
+                           ('validated', 'Validated', False)):
+        out += ('            <button class="ws-method" type="button" data-ws-method="%s" '
+                'data-on="%s" aria-pressed="%s">%s</button>\n'
+                % (key, str(on).lower(), str(on).lower(), e(label)))
+    out += '          </div>\n'
+    out += ('          <label class="ws-slider">\n'
+            '            <span data-ws-threshold-name>Jaccard similarity, at least</span>\n'
+            '            <input type="range" data-ws-threshold min="0" max="10" value="5"\n'
+            '                   aria-label="Link threshold">\n'
+            '            <output data-ws-threshold-label>0.40</output>\n'
+            '          </label>\n')
+    out += '        </div>\n'
+    out += '        <p class="ws-note" data-ws-note></p>\n'
+
+    # Default to whichever state is correct without JavaScript: an empty page
+    # must not render a blank canvas, and a populated one must not flash the
+    # "not published yet" message before the script runs.
+    out += ('        <figure class="netfig netfig--tall" data-network="workshop" '
+            'data-net-data="workshop-data"%s>\n'
+            '          <canvas></canvas>\n'
+            '          <div class="netfig-tip" data-net-tip></div>\n'
+            '        </figure>\n' % ('' if n_people else ' hidden'))
+    out += ('        <p class="ws-empty" data-ws-empty%s>The results are not published '
+            'yet. Check back after the workshop.</p>\n' % (' hidden' if n_people else ''))
+    out += '        <div class="ws-stats" data-ws-stats></div>\n'
+    out += embed_json(data, 'workshop-data')
+
+    if meta.get('caption'):
+        out += '        <p class="ws-caption">%s</p>\n' % md_inline(meta['caption'])
+    out += '      </div>\n'
+
+    # aggregate category popularity — safe to publish, says nothing per person
+    if n_cats:
+        out += section_head(meta.get('categories_title', 'What the room was interested in'))
+        out += '      <ul class="ws-cats" data-ws-cats></ul>\n'
+
+    for heading, sub in sections(body):
+        if heading:
+            out += section_head(heading)
+        text = md(sub)
+        if text:
+            out += '      <div class="prose reveal">%s</div>\n' % text
+
+    if n_people:
+        out += ('      <p class="ws-provenance mono">%d people · %d categories · %d votes · '
+                '%d chose to be named</p>\n'
+                % (n_people, n_cats, len(data.get('votes', [])), named))
+
+    out += '    </div>\n  </section>\n'
+
+    return page('workshop.html',
+                meta.get('page_title', 'Workshop network'),
+                meta.get('description', ''), out,
+                '<script src="assets/js/store.js" defer></script>\n'
+                '<script src="assets/js/projection.js" defer></script>\n'
+                '<script src="assets/js/network.js" defer></script>\n'
+                '<script src="assets/js/workshop.js" defer></script>',
+                head_extra=workshop_api_meta())
+
+
+def build_vote():
+    """The phone screen. Live-only, noindex, holds no data of its own."""
+    meta, _ = read('vote.md')
+    g = lambda k, d='': meta.get(k, d)
+
+    out = '  <section class="section ws-page">\n    <div class="wrap wrap--narrow">\n'
+    out += '      <div class="ws" data-vote>\n'
+    out += '        <p class="ws-status" data-ws-status hidden></p>\n'
+
+    out += ('        <section data-ws-screen="unconfigured" hidden>\n'
+            '          <h1>Not set up yet</h1>\n'
+            '          <p class="lede">This page has no voting server configured.</p>\n'
+            '        </section>\n')
+
+    out += ('        <section data-ws-screen="join" hidden>\n'
+            '          <h1>%s</h1>\n          <p class="lede">%s</p>\n'
+            '          <form data-ws-join-form class="ws-form">\n'
+            '            <label class="ws-label" for="ws-join">Room code</label>\n'
+            '            <input id="ws-join" data-ws-join-input class="ws-input" type="text"\n'
+            '                   inputmode="text" autocomplete="off" autocapitalize="characters"\n'
+            '                   spellcheck="false" required>\n'
+            '            <button class="btn btn--primary" type="submit">Enter</button>\n'
+            '            <p class="ws-error" data-ws-join-error hidden></p>\n'
+            '          </form>\n        </section>\n'
+            % (e(g('join_title', 'Enter the room code')),
+               md_inline(g('join_lede', ''))))
+
+    out += ('        <section data-ws-screen="who" hidden>\n'
+            '          <h1>%s</h1>\n          <p class="lede">%s</p>\n'
+            '          <input data-ws-search class="ws-input" type="search"\n'
+            '                 placeholder="Find your name" aria-label="Find your name"\n'
+            '                 autocomplete="off" spellcheck="false">\n'
+            '          <ul class="ws-roster" data-ws-roster></ul>\n'
+            '        </section>\n'
+            % (e(g('who_title', 'Who are you?')), md_inline(g('who_lede', ''))))
+
+    out += ('        <section data-ws-screen="ballot" hidden>\n'
+            '          <div class="ws-me">\n'
+            '            <span>Voting as <b data-ws-me></b></span>\n'
+            '            <button class="netfig-btn" type="button" data-ws-change>not me</button>\n'
+            '          </div>\n'
+            '          <p class="ws-talk" data-ws-talk hidden></p>\n'
+            '          <h1>%s</h1>\n          <p class="lede">%s</p>\n'
+            '          <div class="ws-chips" data-ws-chips></div>\n'
+            '          <p class="ws-tally" data-ws-tally></p>\n'
+            '          <label class="ws-consent">\n'
+            '            <input type="checkbox" data-ws-consent>\n'
+            '            <span>%s</span>\n'
+            '          </label>\n        </section>\n'
+            % (e(g('ballot_title', 'What interests you?')),
+               md_inline(g('ballot_lede', '')),
+               md_inline(g('consent', 'Show my name in the network published afterwards.'))))
+
+    out += ('        <section data-ws-screen="closed" hidden>\n'
+            '          <h1>%s</h1>\n          <p class="lede">%s</p>\n'
+            '          <p><a class="btn btn--primary" href="workshop.html">See the network</a></p>\n'
+            '        </section>\n'
+            % (e(g('closed_title', 'Voting is closed')), md_inline(g('closed_lede', ''))))
+
+    out += '      </div>\n    </div>\n  </section>\n'
+
+    return page('vote.html', meta.get('page_title', 'Workshop voting'),
+                meta.get('description', ''), out,
+                '<script src="assets/js/store.js" defer></script>\n'
+                '<script src="assets/js/vote.js" defer></script>',
+                head_extra=NOINDEX + workshop_api_meta())
+
+
+def build_wsadmin():
+    """The screen the workshop is driven from. Noindex; all authority is server-side."""
+    meta, _ = read('wsadmin.md')
+    vote_url = SITE.get('base_url', '') + '/vote'
+
+    out = '  <section class="section ws-page">\n    <div class="wrap wrap--narrow">\n'
+    out += '      <div class="ws" data-admin>\n'
+    out += '        <p class="ws-status" data-ws-status hidden></p>\n'
+
+    out += ('        <section data-adm-screen="unconfigured" hidden>\n'
+            '          <h1>Not set up yet</h1>\n'
+            '          <p class="lede">No <code>workshop.api</code> in content/site.md.</p>\n'
+            '        </section>\n')
+
+    out += ('        <section data-adm-screen="token" hidden>\n'
+            '          <h1>Workshop control</h1>\n'
+            '          <form data-adm-token-form class="ws-form">\n'
+            '            <label class="ws-label" for="adm-join">Room code</label>\n'
+            '            <input id="adm-join" data-adm-join-input class="ws-input" type="text"\n'
+            '                   autocomplete="off" spellcheck="false" required>\n'
+            '            <label class="ws-label" for="adm-token">Admin token</label>\n'
+            '            <input id="adm-token" data-adm-token-input class="ws-input"\n'
+            '                   type="password" autocomplete="off" required>\n'
+            '            <button class="btn btn--primary" type="submit">Unlock</button>\n'
+            '            <p class="ws-error" data-adm-token-error hidden></p>\n'
+            '          </form>\n        </section>\n')
+
+    out += ('        <section data-adm-screen="panel" hidden>\n'
+            '          <div class="ws-me">\n'
+            '            <span>Voting is <b data-adm-state>Open</b></span>\n'
+            '            <span data-adm-voters class="mono"></span>\n'
+            '          </div>\n'
+            '          <p class="ws-qr mono">Attendees go to <b>%s</b></p>\n'
+            '          <form data-adm-talk-form class="ws-form ws-form--row">\n'
+            '            <input data-adm-talk-input class="ws-input" type="text"\n'
+            '                   aria-label="Current talk"\n'
+            '                   placeholder="Current talk (shown on phones)" autocomplete="off">\n'
+            '            <button class="btn" type="submit">Set</button>\n'
+            '          </form>\n'
+            '          <form data-adm-cat-form class="ws-form ws-form--row">\n'
+            '            <input data-adm-cat-input class="ws-input" type="text"\n'
+            '                   aria-label="Add a category"\n'
+            '                   placeholder="Add a category" autocomplete="off" required>\n'
+            '            <button class="btn" type="submit">Add</button>\n'
+            '          </form>\n'
+            '          <form data-adm-person-form class="ws-form ws-form--row">\n'
+            '            <input data-adm-person-input class="ws-input" type="text"\n'
+            '                   aria-label="Add a walk-in attendee"\n'
+            '                   placeholder="Add a walk-in attendee" autocomplete="off" required>\n'
+            '            <button class="btn" type="submit">Add</button>\n'
+            '          </form>\n'
+            '          <ul class="ws-cats" data-adm-counts></ul>\n'
+            '          <div class="ws-actions">\n'
+            '            <button class="btn btn--primary" type="button" data-adm-freeze>'
+            'Freeze and publish</button>\n'
+            '            <button class="btn" type="button" data-adm-export>'
+            'Download workshop.json</button>\n'
+            '          </div>\n'
+            '          <div data-adm-export-wrap hidden>\n'
+            '            <p class="ws-note">Save this as <code>content/workshop.json</code>, '
+            'commit and push to make the network permanent.</p>\n'
+            '            <textarea class="ws-input ws-export" data-adm-export-out rows="8" '
+            'readonly></textarea>\n'
+            '          </div>\n'
+            '        </section>\n' % e(vote_url))
+
+    out += '      </div>\n    </div>\n  </section>\n'
+
+    return page('wsadmin.html', meta.get('page_title', 'Workshop control'),
+                meta.get('description', ''), out,
+                '<script src="assets/js/store.js" defer></script>\n'
+                '<script src="assets/js/wsadmin.js" defer></script>',
+                head_extra=NOINDEX + workshop_api_meta())
+
+
 def build_404():
     meta, body = read('404.md')
     out = ('  <section class="section" style="text-align:center; padding-top:6rem">\n'
@@ -904,19 +1195,23 @@ def main():
     os.makedirs(OUT)
     copy_assets()
     total = 0
-    for label, fn in [('index.html', build_home),
-                      ('research.html', build_research),
-                      ('publications.html', build_publications),
-                      ('collaborators.html', build_collaborators),
-                      ('talks.html', lambda: build_simple('talks.md', 'talks.html')),
-                      ('code.html', build_code),
-                      ('cv.html', build_cv),
-                      ('404.html', build_404)]:
+    pages = [('index.html', build_home),
+             ('research.html', build_research),
+             ('publications.html', build_publications),
+             ('collaborators.html', build_collaborators),
+             ('talks.html', lambda: build_simple('talks.md', 'talks.html')),
+             ('code.html', build_code),
+             ('cv.html', build_cv),
+             ('workshop.html', build_workshop),
+             ('vote.html', build_vote),
+             ('wsadmin.html', build_wsadmin),
+             ('404.html', build_404)]
+    for label, fn in pages:
         n = fn()
         total += n
         print('  %-22s %6d bytes' % (label, n))
     sitemap()
-    print('built %d pages, %d KB of HTML -> _site/' % (8, total // 1024))
+    print('built %d pages, %d KB of HTML -> _site/' % (len(pages), total // 1024))
 
 
 if __name__ == '__main__':

@@ -21,6 +21,15 @@ cv: cv.pdf
 
 news_on_home: 6
 
+# Live workshop voting. `api` is the base URL of the Cloudflare Worker in
+# workshop-api/ — the ONE external service, and the only third-party request
+# the site ever makes. It is used by vote.html and wsadmin.html, and by
+# workshop.html only until content/workshop.json is committed.
+# Leave `api` empty to switch the whole thing off; the pages then say so.
+workshop:
+  api: ""
+
+
 # Drifting particle-network background (the particles.js look).
 #   scope:  all | home | off
 #   count:  0 = scale automatically to the viewport (recommended)
@@ -37,6 +46,10 @@ particles:
   opacity: 0.4
   opacity_dark: 0.7
 
+# The workshop voting screens (vote.html, wsadmin.html) are deliberately NOT
+# here: they are noindex, live-only, and would leave a dead nav item behind.
+# Uncomment the Workshop line below once content/workshop.json exists — until
+# then the page is real but empty, and there is no reason to advertise it.
 nav:
   - {label: Home,          url: index.html}
   - {label: Research,      url: research.html}
@@ -45,6 +58,7 @@ nav:
   - {label: Talks,         url: talks.html}
   - {label: Code,          url: code.html}
   - {label: CV,            url: cv.html}
+# - {label: Workshop,      url: workshop.html}
 
 links:
   - {label: Google Scholar, url: "https://scholar.google.com/citations?user=wRgJdSoAAAAJ"}

@@ -4,3 +4,10 @@ Thumbs.db
 *.swp
 *~
 __pycache__/
+
+# Workshop: the attendee roster never gets committed. The site fetches it from
+# the API at runtime instead, so names stay out of the public repo.
+workshop-api/roster.txt
+workshop-api/categories.txt
+workshop-api/seed.sql
+workshop-api/.wrangler/

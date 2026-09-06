@@ -1,0 +1,7 @@
+# The predefined half of the ballot, one per line.
+# You can add more during the workshop from /wsadmin; those get flagged "live".
+Cooperation
+Cultural evolution
+Network structure
+Game theory
+Human behaviour

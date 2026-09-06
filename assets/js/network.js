@@ -1,11 +1,15 @@
 /* network.js — the network figures.
 
-   Three things live here:
+   Three modes live here:
 
      collab      collaborators.html — co-authors around a hub. Clicking a
                  person filters the list below to the papers you share.
-     ambient     index.html — a quiet graph drifting behind the hero. Purely
-                 decorative, no labels, no interaction.
+     workshop    workshop.html — the person-person projection of the workshop
+                 votes. Reads a JSON blob (see projection.js) rather than the
+                 DOM, because its thresholding is interactive.
+     ambient     a quiet graph drifting behind a hero. Purely decorative, no
+                 labels, no interaction. Currently unused: the home page uses
+                 particles.js instead.
 
    The collaborator graph is built by reading the page's own HTML, which
    build.py generates from content/publications.md. There is no data array
@@ -170,7 +174,82 @@
     return { nodes: nodes, links: links, ambient: true, rep: 0.18 };
   }
 
-  var MODES = { collab: buildCollab, ambient: buildAmbient };
+  /* ------------------------------------------------------------- workshop -- */
+
+  /* The workshop projection: people linked by shared interests. Unlike collab,
+     the data is not in the DOM as markup — it is a JSON blob emitted by
+     build.py (or fetched live from the API right after a freeze), because the
+     thresholding is interactive and needs the raw incidence data, not a
+     rendered picture of one particular threshold.
+
+     projection.js does all the maths. This only turns its output into nodes
+     and links. Nothing here ever learns WHICH categories a pair shares — the
+     tooltip gets a count, by design. */
+  function buildWorkshop(figure) {
+    var P = window.WorkshopProjection;
+    if (!P) return null;
+
+    var holder = document.getElementById(figure.dataset.netData || 'workshop-data');
+    if (!holder) return null;
+
+    var data;
+    try { data = JSON.parse(holder.textContent || '{}'); } catch (e) { return null; }
+    if (!data || !data.people || !data.people.length) return null;
+
+    var opts = { method: 'jaccard', threshold: 0.4, alpha: 0.05 };
+    var first = P.build(data, opts);
+
+    var G = {
+      nodes: first.nodes,
+      links: [],
+      selectable: true,
+      labelKinds: ['person'],
+      data: data,
+      stats: first.stats,
+      categories: first.categories
+    };
+
+    /* Re-thresholding must not relayout. The node objects are kept and only
+       their links, community and colour are replaced, so dragging the slider
+       morphs the picture the reader is already looking at instead of throwing
+       it away and starting a new simulation from a fresh random ring. */
+    G.rebuild = function (next) {
+      if (next) {
+        if (next.method) opts.method = next.method;
+        if (next.threshold !== undefined) opts.threshold = next.threshold;
+        if (next.alpha !== undefined) opts.alpha = next.alpha;
+      }
+      var res = P.build(data, opts);
+      res.nodes.forEach(function (n, i) {
+        var live = G.nodes[i];
+        live.community = n.community;
+        live.tone = n.tone;
+        live.links = n.links;
+      });
+      G.links = res.links.map(function (l) {
+        var a = G.nodes[l.a].label, b = G.nodes[l.b].label;
+        return {
+          a: l.a, b: l.b,
+          w: l.w,
+          len: 96,
+          k: 0.55,
+          shared: l.shared,
+          tip: {
+            label: a + '  &  ' + b,
+            sub: l.shared + (l.shared === 1 ? ' shared category' : ' shared categories')
+          }
+        };
+      });
+      G.stats = res.stats;
+      G.categories = res.categories;
+      return res;
+    };
+
+    G.rebuild(opts);
+    return G;
+  }
+
+  var MODES = { collab: buildCollab, ambient: buildAmbient, workshop: buildWorkshop };
 
   /* ------------------------------------------------------------- runtime -- */
 
@@ -200,7 +279,11 @@
     }
 
     function load() {
-      G = MODES[mode] ? MODES[mode]() : null;
+      /* A zero-sized canvas means the figure is hidden or not laid out yet.
+         Building here would divide the layout by nothing and stack every node
+         on one point, so wait to be called again from the ResizeObserver. */
+      if (!W || !H) return false;
+      G = MODES[mode] ? MODES[mode](figure) : null;
       if (!G) { figure.hidden = true; return false; }
       var sx = W * 0.40, sy = H * 0.40;
       G.nodes.forEach(function (n) { n.x = W / 2 + n.x * sx; n.y = H / 2 + n.y * sy; });
@@ -346,13 +429,14 @@
       /* Standing labels for the hubs. Labels are placed biggest-first and any
          that would collide with one already placed is dropped, so the picture
          never turns into overlapping text. The focused node always wins. */
-      if (G.labelConcepts || G.labelHub) {
+      if (G.labelKinds || G.labelConcepts || G.labelHub) {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic';
         ctx.font = '600 11.5px "Space Grotesk", system-ui, sans-serif';
 
+        var kinds = G.labelKinds || ['concept', 'hub'];
         var candidates = nodes.filter(function (n) {
-          return n.kind === 'concept' || n.kind === 'hub';
+          return kinds.indexOf(n.kind) !== -1;
         }).sort(function (a, b) {
           if (a === focus) return -1;
           if (b === focus) return 1;
@@ -435,7 +519,7 @@
     function edgeAt(x, y) {
       var best = null, bestD = Infinity;
       G.links.forEach(function (l) {
-        if (!l.paper) return; // only paper-carrying edges are interactive
+        if (!l.paper && !l.tip) return; // only edges with something to say
         var n = G.nodes[l.a], m = G.nodes[l.b];
         var ctrl = edgeControl(n, m, l);
         for (var t = 0; t <= 1.0001; t += 0.1) {
@@ -452,7 +536,17 @@
     function showTip(n) {
       if (!tip) return;
       if (!n || !n.label) { tip.setAttribute('data-show', 'false'); return; }
-      tip.innerHTML = n.label + (n.sub ? '<span class="tip-sub">' + n.sub + '</span>' : '');
+      /* Built as text nodes, not innerHTML. Collaborator names come from
+         publications.md and are safe, but workshop labels round-trip through a
+         database and an admin form before they land here, and a tooltip is no
+         place to be executing whatever came back. */
+      tip.textContent = n.label;
+      if (n.sub) {
+        var subEl = document.createElement('span');
+        subEl.className = 'tip-sub';
+        subEl.textContent = n.sub;
+        tip.appendChild(subEl);
+      }
       tip.setAttribute('data-show', 'true');
       // Measure, then clamp so the tip never gets clipped by the figure's
       // rounded-corner overflow:hidden when a node sits near an edge of the
@@ -492,8 +586,9 @@
 
     function tipForEdge(edge) {
       var ctrl = edgeControl(G.nodes[edge.a], G.nodes[edge.b], edge);
-      return { x: ctrl.cx, y: ctrl.cy, r: 0, label: edge.paper.title,
-               sub: edge.paper.href ? 'Click to open' : '' };
+      var info = edge.tip || { label: edge.paper.title,
+                               sub: edge.paper.href ? 'Click to open' : '' };
+      return { x: ctrl.cx, y: ctrl.cy, r: 0, label: info.label, sub: info.sub };
     }
 
     if (!G || !G.ambient) {
@@ -509,7 +604,7 @@
           else if (edge) showTip(tipForEdge(edge));
           else showTip(null);
           canvas.style.cursor = n ? (n.href || G.selectable ? 'pointer' : 'grab')
-            : edge ? (edge.paper.href ? 'pointer' : 'default') : 'default';
+            : edge ? (edge.paper && edge.paper.href ? 'pointer' : 'default') : 'default';
           repaint();
         } else if (n) {
           showTip(n);
@@ -553,7 +648,7 @@
           var moved2 = Math.hypot(p2.x - downPoint.x, p2.y - downPoint.y);
           if (moved2 < 5) {
             var edge = edgeAt(p2.x, p2.y);
-            if (edge && edge.paper.href) window.open(edge.paper.href, '_blank', 'noopener');
+            if (edge && edge.paper && edge.paper.href) window.open(edge.paper.href, '_blank', 'noopener');
           }
           downPoint = null;
         }
@@ -576,6 +671,10 @@
         var sx = W / prevW, sy = H / prevH;
         G.nodes.forEach(function (n) { n.x *= sx; n.y *= sy; });
         start();
+      } else if (!G && W > 0 && !figure.hidden) {
+        /* The canvas has just been given a size for the first time — a figure
+           that was display:none or hidden when the script ran. Build now. */
+        if (load()) start();
       }
     });
     ro.observe(canvas);
@@ -586,6 +685,38 @@
         if (visible) start();
       }, { threshold: 0.02 }).observe(canvas);
     }
+
+    /* Both hooks are published BEFORE the first load, because the workshop
+       figure legitimately starts empty: on the day, the page is deployed with
+       a placeholder and the real data arrives from the API a moment later.
+       A figure that failed to load must still be revivable. */
+
+    /* Re-read the data source and rebuild from scratch.
+       Order matters: a hidden figure measures 0x0, and load() lays the nodes
+       out relative to the canvas size — so unhide first, measure second, and
+       only then build, or every node lands on the same point. */
+    figure.netReload = function () {
+      hovered = selected = hoverEdge = dragging = null;
+      showTip(null);
+      figure.hidden = false;
+      resize();
+      if (!load()) { figure.hidden = true; return false; }
+      start();
+      return true;
+    };
+
+    /* Re-threshold in place: same nodes, same positions, new edges. Resetting
+       `ticks` lets the simulation resume so the layout can relax into the new
+       edge set — and then stop again, as it should. */
+    figure.netUpdate = function (opts) {
+      if (!G || !G.rebuild) return null;
+      var res = G.rebuild(opts);
+      hovered = selected = hoverEdge = null;
+      showTip(null);
+      ticks = 0;
+      start();
+      return res;
+    };
 
     resize();
     if (!load()) return;
