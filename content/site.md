@@ -27,7 +27,7 @@ news_on_home: 6
 # workshop.html only until content/workshop.json is committed.
 # Leave `api` empty to switch the whole thing off; the pages then say so.
 workshop:
-  api: ""
+  api: "https://workshop-api.cahg.workers.dev"
 
 
 # Drifting particle-network background (the particles.js look).
