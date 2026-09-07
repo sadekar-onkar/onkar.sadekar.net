@@ -8,7 +8,7 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "workshop"
-database_id = "PASTE_THE_ID_FROM_WRANGLER_D1_CREATE"
+database_id = "62d6e8cf-dab5-4d1e-96fc-f8ee3f2dad9f"
 
 [vars]
 # Comma-separated. The first entry is the fallback for non-matching origins.

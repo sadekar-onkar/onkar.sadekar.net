@@ -146,6 +146,23 @@ ok('painted nodes stay inside a sane region', arcs.every(function (a) {
   return a.x > -400 && a.x < 1300 && a.y > -400 && a.y < 960;
 }));
 
+/* --- the live re-poll path: workshop.html re-fetches /export every few
+       seconds while voting is open and feeds it back in without relaying out -- */
+ok('netData is published', typeof figure.netData === 'function');
+figure.netUpdate({ method: 'jaccard', threshold: 0.4 });
+var live = figure.netData(JSON.parse(dataEl.textContent));
+ok('netData returns fresh stats for the new payload',
+   live && live.stats && live.stats.people === 34,
+   live ? 'people=' + (live.stats && live.stats.people) : 'null');
+figure.netUpdate({ method: 'jaccard', threshold: 0.4 });
+ok('after a re-poll the graph still paints finite, spread-out nodes', (function () {
+  if (!arcs.length) return false;
+  if (!arcs.every(function (a) { return isFinite(a.x) && isFinite(a.y) && a.r > 0; })) return false;
+  var xs = {}, n = 0;
+  arcs.forEach(function (a) { var k = Math.round(a.x / 10); if (!xs[k]) { xs[k] = 1; n++; } });
+  return n > 5;
+})(), 'arcs=' + arcs.length);
+
 /* --- the hidden-figure path (a figure that gets its size late) --- */
 var zeroFig = new El('figure');
 zeroFig.dataset.network = 'workshop';

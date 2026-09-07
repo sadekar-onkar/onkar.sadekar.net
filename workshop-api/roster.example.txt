@@ -2,6 +2,18 @@
 # Copy to roster.txt (gitignored) and edit. Names appear exactly as typed,
 # so use the form people will recognise on a phone screen.
 # Do NOT reorder after voting starts: ids are positional.
-Ada Lovelace
-Alan Turing
-Grace Hopper
+Andrea Migliano
+Lucio Vinicius
+Robin Morrison
+Onkar Sadekar
+Cassandra Gunasekaram
+Deepshika Arun
+Isabella Apriyana
+Victoire Martignac
+Chirag Chittar
+Dominik Jud
+Irena Atanasova
+Jovana Maksic
+Meike Günter
+
+

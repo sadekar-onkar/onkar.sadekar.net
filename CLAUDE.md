@@ -160,10 +160,13 @@ planned"). So the system is split in two:
   Worker can then be deleted and the page still works.** That is the whole
   design: the external dependency is temporary by construction.
 
-`workshop.html` falls back to fetching `/export` when `content/workshop.json` is
-absent, which is what lets the network go live the moment you click Freeze,
-without waiting for a commit and a CI run. `/export` only opens to the public
-once frozen.
+`workshop.html` falls back to polling `/export` when `content/workshop.json` is
+absent or empty, re-drawing every few seconds so the network builds up on
+screen as votes come in, until voting is frozen. `/export` takes the join code
+before the freeze — so the live view works for anyone in the room without
+votes-in-progress being world-readable — and is public after it. This is also
+what lets the finished network go live the moment you click Freeze, without
+waiting for a commit and a CI run.
 
 **Switching it off.** `workshop.api` in `content/site.md` is empty by default;
 the pages then say they are not configured. Nothing else on the site is
@@ -185,14 +188,22 @@ Run `./tests/run.sh` after touching any of this. The hypergeometric tail is
 checked against exact rational arithmetic in Python, and BH against the worked
 example in the 1995 paper.
 
-**Privacy is enforced at build time, not render time.** `anonymise()` in
-build.py strips the names of people who withheld consent *before* the JSON is
-written into the page, and re-keys every person id in a salted order — seeded
-ids are positional, so `p07` is the seventh name on an alphabetical roster and
-anyone holding that roster could otherwise just count. The roster itself is
-never committed: it lives in `workshop-api/roster.txt` (gitignored) and the
-phones fetch it from the API. Published links carry a count only, never which
-categories a pair shares.
+**Names.** The workshop is small and everyone knows everyone, so there is no
+consent step — every attendee is shown by name (this replaced an opt-in
+checkbox in Sept 2026). `anonymise()` in build.py still re-keys every person id
+in a salted order *before* the JSON is written into the page — seeded ids are
+positional, so `p07` is the seventh name on an alphabetical roster and anyone
+holding that roster could otherwise just count — and it still honours an
+explicit `consent: false` on a person (the render path and the test fixture
+exercise that path), there just isn't anything in the live flow that sets it any
+more. The roster itself is never committed: it lives in `workshop-api/roster.txt`
+(gitignored) and the phones fetch it from the API. Published links carry a count
+only, never which categories a pair shares.
+
+Attendees can add their **own** name and add **topics** straight from `/vote` —
+both need only the join code (they are additive and server-deduped, the same
+threat model as a vote), so the admin is no longer the funnel for walk-ins and
+late topics.
 
 `workshop-api/README.md` has the deploy steps and the day-of runbook.
 

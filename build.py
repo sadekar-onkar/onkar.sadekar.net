@@ -881,14 +881,15 @@ def embed_json(data, element_id):
 
 
 def anonymise(data):
-    """Strip identity from the data BEFORE it is written into the page.
+    """Re-key the data BEFORE it is written into the page.
 
-    projection.js also renders non-consenting people as "Anonymous N", but that
-    is only a display decision — the real name would still be sitting in the
-    page source for anyone who opened view-source. This is where the name
-    actually goes away.
+    The workshop is small and everyone knows everyone, so there is no consent
+    step and every name is published. This still honours an explicit
+    `consent: false` on a person if one is ever present (projection.js renders
+    them as "Anonymous N", and stripping the name here is what keeps it out of
+    view-source) — but nothing in the live flow sets it.
 
-    Ids are re-keyed too. Seeded ids are assigned in roster order, so p07 is
+    Ids are re-keyed regardless. Seeded ids are assigned in roster order, so p07 is
     the seventh name on the alphabetical attendee list; anyone holding that
     list could undo the anonymisation by counting. Re-keying in a salted order
     destroys that. The salt is derived from the workshop itself so rebuilds
@@ -929,7 +930,6 @@ def build_workshop():
 
     n_people = len(data.get('people', []))
     n_cats = len(data.get('categories', []))
-    named = sum(1 for p in data.get('people', []) if p.get('consent'))
 
     out = page_head(meta.get('eyebrow', 'Workshop'),
                     meta.get('title', 'Workshop network'), meta.get('lede', ''))
@@ -986,9 +986,8 @@ def build_workshop():
             out += '      <div class="prose reveal">%s</div>\n' % text
 
     if n_people:
-        out += ('      <p class="ws-provenance mono">%d people · %d categories · %d votes · '
-                '%d chose to be named</p>\n'
-                % (n_people, n_cats, len(data.get('votes', [])), named))
+        out += ('      <p class="ws-provenance mono">%d people · %d categories · %d votes</p>\n'
+                % (n_people, n_cats, len(data.get('votes', []))))
 
     out += '    </div>\n  </section>\n'
 
@@ -1035,8 +1034,16 @@ def build_vote():
             '                 placeholder="Find your name" aria-label="Find your name"\n'
             '                 autocomplete="off" spellcheck="false">\n'
             '          <ul class="ws-roster" data-ws-roster></ul>\n'
+            '          <form class="ws-form ws-form--row ws-addrow" data-ws-addname-form>\n'
+            '            <input class="ws-input" type="text" data-ws-addname-input\n'
+            '                   placeholder="%s" aria-label="%s"\n'
+            '                   autocomplete="off" spellcheck="false" required>\n'
+            '            <button class="btn" type="submit">Add</button>\n'
+            '          </form>\n'
             '        </section>\n'
-            % (e(g('who_title', 'Who are you?')), md_inline(g('who_lede', ''))))
+            % (e(g('who_title', 'Who are you?')), md_inline(g('who_lede', '')),
+               e(g('addname_placeholder', 'Add your name')),
+               e(g('addname_placeholder', 'Add your name'))))
 
     out += ('        <section data-ws-screen="ballot" hidden>\n'
             '          <div class="ws-me">\n'
@@ -1047,13 +1054,16 @@ def build_vote():
             '          <h1>%s</h1>\n          <p class="lede">%s</p>\n'
             '          <div class="ws-chips" data-ws-chips></div>\n'
             '          <p class="ws-tally" data-ws-tally></p>\n'
-            '          <label class="ws-consent">\n'
-            '            <input type="checkbox" data-ws-consent>\n'
-            '            <span>%s</span>\n'
-            '          </label>\n        </section>\n'
+            '          <form class="ws-form ws-form--row ws-addrow" data-ws-addcat-form>\n'
+            '            <input class="ws-input" type="text" data-ws-addcat-input\n'
+            '                   placeholder="%s" aria-label="%s"\n'
+            '                   autocomplete="off" spellcheck="false" required>\n'
+            '            <button class="btn" type="submit">Add</button>\n'
+            '          </form>\n        </section>\n'
             % (e(g('ballot_title', 'What interests you?')),
                md_inline(g('ballot_lede', '')),
-               md_inline(g('consent', 'Show my name in the network published afterwards.'))))
+               e(g('addcat_placeholder', 'Add a topic')),
+               e(g('addcat_placeholder', 'Add a topic'))))
 
     out += ('        <section data-ws-screen="closed" hidden>\n'
             '          <h1>%s</h1>\n          <p class="lede">%s</p>\n'

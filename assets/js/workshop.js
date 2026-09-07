@@ -2,12 +2,13 @@
  *
  * Two jobs.
  *
- * 1. Getting the data. Normally it is already in the page: build.py inlines
- *    content/workshop.json at build time and this file does nothing. But on
- *    the day, between hitting Freeze and pushing the commit, the page ships
- *    with an empty placeholder — so if there is no data and an API is
- *    configured, fetch it. /export is public once frozen precisely so the
- *    network can go live on a click instead of on a CI run.
+ * 1. Getting the data. Once content/workshop.json is committed it is already in
+ *    the page: build.py inlines it at build time and this file makes no network
+ *    call at all. Before that — during the workshop and in the window before
+ *    the commit — there is no baked data, so if an API is configured this polls
+ *    /export every few seconds and grows the network on screen as votes come
+ *    in, until voting is frozen. /export takes the join code before the freeze
+ *    and is world-public after it.
  *
  * 2. The threshold controls. A projection drawn at one arbitrary cutoff asks
  *    to be trusted; a projection you can re-threshold shows its own
@@ -15,7 +16,7 @@
  *    statistically validated one, and watching most edges evaporate, is the
  *    honest summary of what a few dozen votes can support.
  *
- * Needs projection.js and network.js (and store.js only for the live fallback).
+ * Needs projection.js and network.js (and store.js only for the live poll).
  */
 
 (function () {
@@ -245,8 +246,9 @@
     return;
   }
 
-  /* No baked-in data. Try the live endpoint — this is the window between
-     freezing the vote and committing the JSON. */
+  /* No baked-in data. Either the JSON has not been committed yet, or the
+     workshop is happening right now — poll /export and keep redrawing the
+     network as votes arrive, until voting is frozen. */
   var Store = window.WorkshopStore;
   if (!Store || !Store.available()) {
     if (el.empty) el.empty.hidden = false;
@@ -254,21 +256,65 @@
     return;
   }
 
-  if (el.empty) {
+  var LIVE_MS = 7000;
+  var liveTimer = null;
+  var started = false;
+
+  function setEmpty(text) {
+    if (!el.empty) return;
     el.empty.hidden = false;
-    el.empty.textContent = 'Fetching the results…';
+    el.empty.textContent = text;
   }
 
-  Store.exportData().then(function (data) {
-    if (!data || !data.people || !data.people.length) throw new Error('no votes yet');
-    holder.textContent = JSON.stringify(data);
-    if (figure.netReload && figure.netReload()) boot();
-    else throw new Error('could not render');
-  }, function () {
-    figure.hidden = true;
-    if (el.empty) {
-      el.empty.hidden = false;
-      el.empty.textContent = 'The results are not published yet. Check back after the workshop.';
-    }
+  function scheduleNext(state) {
+    if (liveTimer) { clearTimeout(liveTimer); liveTimer = null; }
+    if (state === 'frozen') return;     // the data we have is final; stop polling
+    liveTimer = setTimeout(pollLive, LIVE_MS);
+  }
+
+  function pollLive() {
+    if (liveTimer) { clearTimeout(liveTimer); liveTimer = null; }
+    if (document.hidden) { scheduleNext('open'); return; }
+    Store.exportData().then(function (payload) {
+      var haveVotes = payload && payload.people && payload.people.length;
+      if (!haveVotes) {
+        if (!started) {
+          setEmpty(payload && payload.state === 'frozen'
+            ? 'Voting has closed with nothing to show yet.'
+            : 'Waiting for the first votes…');
+        }
+        scheduleNext(payload && payload.state);
+        return;
+      }
+      holder.textContent = JSON.stringify(payload);
+      if (!started) {
+        if (figure.netReload && figure.netReload()) {
+          boot();
+          started = true;
+        } else {
+          setEmpty('Could not render the network.');
+        }
+      } else if (figure.netData) {
+        var res = figure.netData(payload);
+        if (res) { renderStats(res); renderCategories(res); }
+      } else if (figure.netReload && figure.netReload()) {
+        update(Object.assign({ method: method }, readSlider()));
+      }
+      scheduleNext(payload.state);
+    }, function (err) {
+      if (!started) {
+        setEmpty(err && (err.status === 403 || err.status === 401)
+          ? 'The results are not published yet. Check back after the workshop.'
+          : 'Could not reach the results — retrying.');
+      }
+      scheduleNext();
+    });
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && !started) pollLive();
   });
+
+  setEmpty('Fetching the results…');
+  pollLive();
 })();

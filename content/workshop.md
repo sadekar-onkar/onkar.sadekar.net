@@ -39,7 +39,7 @@ sparse one, and being able to move between them is the point.
 ## What is not here
 
 Individual ballots are not published, and neither is which topics any pair has
-in common — a link carries only a count. People who did not consent to be named
-keep their place in the network under a label instead of a name, and their name
-is not in this page's source either. The topic list below is a total over
-everyone.
+in common — a link carries only a count. Person ids are re-keyed in a salted
+order before the data is written into the page, so a place in the network
+cannot be traced back to a seat in the room. The topic list below is a total
+over everyone.

@@ -74,16 +74,18 @@ so nothing is added to the build dependencies.
 1. Open `/wsadmin` on your laptop. Enter the room code and the admin token.
 2. Put the QR code and the room code on a slide.
 3. After each talk, optionally set **Current talk** — it shows as a banner on
-   every phone. Add categories as they come up; they appear on the phones
-   within ten seconds.
+   every phone. Topics can be added from any phone or from `/wsadmin`, and
+   appear everywhere within ten seconds; so can walk-in names.
 4. Watch **n of N have voted**. Below roughly 15 voters the projection is noise,
    so this number matters more than any of the maths.
-5. At the end, **Freeze and publish**. Phones stop accepting votes and
-   `/workshop` goes live immediately by fetching `/export`.
-6. Click **Download workshop.json**, save it as `content/workshop.json`,
+5. `/workshop` renders live for anyone with the room code and re-polls every few
+   seconds, so you can put it on a screen and watch the network build up.
+6. At the end, **Freeze and publish**. Phones stop accepting votes and
+   `/workshop` goes world-public immediately by fetching `/export`.
+7. Click **Download workshop.json**, save it as `content/workshop.json`,
    uncomment the Workshop line in `content/site.md`'s `nav:`, commit and push.
    The page is now fully static.
-7. Delete the Worker and the database whenever you like.
+8. Delete the Worker and the database whenever you like.
 
 ## Endpoints
 
@@ -91,25 +93,26 @@ so nothing is added to the build dependencies.
 |---|---|---|---|
 | GET | `/bootstrap?person=<id>` | join code | roster, ballot, this person's votes, state. Counts too, if the admin token is present |
 | POST | `/vote` | join code | upsert or delete one (person, category) pair |
-| POST | `/consent` | join code | set whether this person's name may be published |
-| POST | `/category` | admin | add a category mid-workshop |
-| POST | `/attendee` | admin | add a walk-in |
+| POST | `/category` | join code | add a topic mid-workshop (deduped) |
+| POST | `/attendee` | join code | add a walk-in name (deduped) |
 | POST | `/state` | admin | set the current talk, or freeze |
-| GET | `/export` | public **once frozen**, else admin | the JSON `build.py` reads |
+| GET | `/export` | public **once frozen**, else join code | the JSON `build.py` reads; `/workshop` polls it to render live |
 
 ## Security model
 
 - The **join code is public by nature** — every attendee types it, and it will
-  end up in a photo of a slide. So it authorises nothing destructive: only
-  reading the roster and upserting votes under a person id. The worst a leaked
-  code buys someone is noise, not damage.
-- The **admin token** is the real boundary. It is typed into `/wsadmin` once and
-  held in `sessionStorage`; it is never built into any page and never written to
-  `localStorage`. Closing the tab ends the session.
+  end up in a photo of a slide. So it authorises nothing destructive: reading
+  the roster, upserting votes under a person id, and adding a topic or a walk-in
+  name (both deduped). The worst a leaked code buys someone is noise, not damage.
+- The **admin token** is the real boundary — freezing, the current-talk banner,
+  the live vote counts, and reading `/export` before the freeze. It is typed
+  into `/wsadmin` once and held in `sessionStorage`; it is never built into any
+  page and never written to `localStorage`. Closing the tab ends the session.
 - Every vote is an **upsert keyed on (person, category)**, so a replayed or
   retried write is a no-op. That is what makes the phone's offline queue safe.
-- `/export` only opens to the public after you freeze, so votes in progress are
-  never readable by attendees.
+- `/export` is world-readable only after you freeze. Before that it takes the
+  join code, so `/workshop` can render the network live during the session
+  without votes-in-progress being readable from outside the room.
 
 ### What this does not defend against
 
@@ -126,14 +129,14 @@ you, put a Cloudflare Rate Limiting rule in front of the Worker.
 
 ## Privacy
 
-Two separate things happen, and both matter:
-
-- **At vote time**, each person chooses whether their name may be published.
-- **At build time**, `anonymise()` in `build.py` strips the names of everyone who
-  said no *before the JSON is written into the page*, and re-keys all person ids
-  in a salted order. The second part matters: seeded ids are positional, so
-  `p07` is the seventh name on an alphabetical roster, and anyone holding that
-  roster could otherwise undo the anonymisation by counting.
+The workshop is small and everyone knows everyone, so there is **no consent
+step** — every attendee is shown by name. What still happens at build time:
+`anonymise()` in `build.py` re-keys all person ids in a salted order before the
+JSON is written into the page. Seeded ids are positional — `p07` is the seventh
+name on an alphabetical roster — so anyone holding that roster could otherwise
+read a seat off the network. `anonymise()` also still honours an explicit
+`consent: false` on a person (the render path and the test fixture exercise it);
+nothing in the live flow sets it any more.
 
 The published network carries link counts only — never which categories a pair
 has in common, and never anyone's ballot.

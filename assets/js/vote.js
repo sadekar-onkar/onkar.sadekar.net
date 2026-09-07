@@ -3,8 +3,9 @@
  * Four states, one at a time: join -> who are you -> ballot -> closed.
  *
  * Every label that reaches the DOM here (attendee names, category labels) was
- * typed by a person into the admin screen or the roster, so it is set with
- * textContent and never innerHTML. Treat it as untrusted.
+ * typed by a person — the roster, the admin screen, or another attendee's
+ * phone — so it is set with textContent and never innerHTML. Treat it as
+ * untrusted.
  *
  * Voting is optimistic: the chip flips the instant it is tapped and the write
  * goes to the queue in store.js. On a bad link the UI stays responsive and the
@@ -29,10 +30,13 @@
     joinError: root.querySelector('[data-ws-join-error]'),
     search: root.querySelector('[data-ws-search]'),
     roster: root.querySelector('[data-ws-roster]'),
+    addNameForm: root.querySelector('[data-ws-addname-form]'),
+    addNameInput: root.querySelector('[data-ws-addname-input]'),
     talk: root.querySelector('[data-ws-talk]'),
     chips: root.querySelector('[data-ws-chips]'),
+    addCatForm: root.querySelector('[data-ws-addcat-form]'),
+    addCatInput: root.querySelector('[data-ws-addcat-input]'),
     me: root.querySelector('[data-ws-me]'),
-    consent: root.querySelector('[data-ws-consent]'),
     tally: root.querySelector('[data-ws-tally]'),
     change: root.querySelector('[data-ws-change]')
   };
@@ -112,8 +116,8 @@
       var li = document.createElement('li');
       li.className = 'ws-roster-empty';
       li.textContent = state.filter
-        ? 'No one by that name. Ask Onkar to add you.'
-        : 'The roster is empty.';
+        ? 'No one by that name — add yourself below.'
+        : 'No names yet — add yourself below.';
       el.roster.appendChild(li);
       return;
     }
@@ -148,6 +152,25 @@
       state.filter = '';
       if (el.search) el.search.value = '';
       refresh();
+    });
+  }
+
+  /* Not on the roster? Add yourself. The server de-dupes on name, so someone
+     who was in fact already listed is just handed back their own id. */
+  if (el.addNameForm) {
+    el.addNameForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = (el.addNameInput.value || '').trim();
+      if (!name) return;
+      setStatus('pending', 'Adding you…');
+      Store.addAttendee(name).then(function (res) {
+        setStatus('', '');
+        el.addNameInput.value = '';
+        Store.setPerson(res.id);
+        refresh();
+      }, function (err) {
+        setStatus('error', err.message || 'Could not add that. Try again.');
+      });
     });
   }
 
@@ -191,12 +214,24 @@
       : n + (n === 1 ? ' interest marked' : ' interests marked');
   }
 
-  if (el.consent) {
-    el.consent.addEventListener('change', function () {
-      var yes = el.consent.checked;
-      Store.consent(yes).catch(function () {
-        el.consent.checked = !yes;       // roll back if it did not stick
-        setStatus('error', 'Could not save that. Try again.');
+  /* Missing a topic? Add it, and tick it — you almost certainly want it on.
+     The poll (or the refresh below) brings the new chip in for everyone. */
+  if (el.addCatForm) {
+    el.addCatForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var label = (el.addCatInput.value || '').trim();
+      if (!label) return;
+      setStatus('pending', 'Adding…');
+      Store.addCategory(label).then(function (res) {
+        setStatus('', '');
+        el.addCatInput.value = '';
+        if (res && res.id) {
+          state.mine[res.id] = true;
+          Store.vote(res.id, true).then(refreshStatus, refreshStatus);
+        }
+        refresh();
+      }, function (err) {
+        setStatus('error', err.message || 'Could not add that topic. Try again.');
       });
     });
   }
@@ -238,7 +273,6 @@
     });
 
     if (el.me) el.me.textContent = me.name;
-    if (el.consent) el.consent.checked = !!data.consent;
     if (el.talk) {
       el.talk.textContent = data.currentTalk || '';
       el.talk.hidden = !data.currentTalk;

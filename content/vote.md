@@ -14,14 +14,14 @@ who_lede: >-
   Find your name. This is what links you to the topics you pick — without it
   there is no network at the end.
 
+addname_placeholder: Not listed? Add your name
+
 ballot_title: What interests you?
 ballot_lede: >-
   Tap anything that caught your interest. Tap again to undo. Everything saves
   by itself, and you can keep changing your mind until voting closes.
 
-consent: >-
-  Show my name in the network published afterwards. Leave this off and you
-  still shape the network, but you appear as "Anonymous".
+addcat_placeholder: Missing a topic? Add it
 
 closed_title: Voting is closed
 closed_lede: Thank you. The network is live.

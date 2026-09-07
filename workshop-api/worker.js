@@ -7,14 +7,16 @@
  *
  * Two secrets, two privilege levels:
  *
- *   JOIN_CODE     shown on a slide in the room. Lets a phone read the roster
- *                 and write its own votes. Public by nature — it is typed by
- *                 every attendee — so it must never authorise anything
- *                 destructive.
- *   ADMIN_TOKEN   yours alone. Adds categories, freezes, exports.
+ *   JOIN_CODE     shown on a slide in the room. Lets a phone read the roster,
+ *                 write its own votes, add a topic, and add a walk-in name.
+ *                 Public by nature — it is typed by every attendee — so it must
+ *                 never authorise anything destructive.
+ *   ADMIN_TOKEN   yours alone. Sets the current talk, freezes, and reads the
+ *                 live vote counts and the pre-freeze export.
  *
- * Everything a voter can do is idempotent and scoped to a single
- * (person, category) row, so a leaked join code costs you noise, not data.
+ * Everything a voter can do is additive and idempotent — vote upserts scoped to
+ * one (person, category) row, and deduped inserts for topics and names — so a
+ * leaked join code costs you noise, not data.
  *
  * Deploy: see README.md
  */
@@ -66,11 +68,27 @@ async function settings(env) {
 }
 
 /* Next sequential id in a table: p01, p02, … Sequence gaps do not matter, only
-   uniqueness does, so COUNT+1 is fine at workshop scale (no concurrent admins). */
+   uniqueness does, so COUNT+1 is fine at workshop scale. Two phones adding at
+   the same instant can still land on the same id, so the callers retry the
+   INSERT on the resulting primary-key clash rather than assuming it is rare. */
 async function nextId(env, table, prefix) {
   const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM ' + table).first();
   const n = (row ? row.n : 0) + 1;
   return prefix + String(n).padStart(2, '0');
+}
+
+/* INSERT under a nextId() key, retrying a few times if a concurrent add took
+   that id first. `build(id)` returns the prepared statement to run. */
+async function insertSeq(env, table, prefix, build) {
+  for (let attempt = 0; ; attempt++) {
+    const id = await nextId(env, table, prefix);
+    try {
+      await build(id).run();
+      return id;
+    } catch (e) {
+      if (attempt >= 4 || !/UNIQUE|constraint/i.test(String((e && e.message) || e))) throw e;
+    }
+  }
 }
 
 /* ------------------------------------------------------------- endpoints -- */
@@ -84,7 +102,7 @@ async function bootstrap(request, env, url) {
   const cats = await env.DB.prepare(
     'SELECT id, label, added_live FROM category ORDER BY added_live, created_at, id').all();
   const people = await env.DB.prepare(
-    'SELECT id, name, consent FROM attendee WHERE active = 1 ORDER BY name').all();
+    'SELECT id, name FROM attendee WHERE active = 1 ORDER BY name').all();
   const voters = await env.DB.prepare(
     'SELECT COUNT(DISTINCT person_id) AS n FROM vote').first();
 
@@ -101,9 +119,6 @@ async function bootstrap(request, env, url) {
     const mine = await env.DB.prepare(
       'SELECT category_id FROM vote WHERE person_id = ?').bind(person).all();
     body.mine = mine.results.map(r => r.category_id);
-    const me = await env.DB.prepare(
-      'SELECT consent FROM attendee WHERE id = ?').bind(person).first();
-    body.consent = me ? !!me.consent : false;
   }
 
   /* Live counts are for the admin screen only — showing them on the phones
@@ -143,14 +158,6 @@ async function castVote(request, env) {
   return reply({ ok: true, personId, categoryId, on: !!on });
 }
 
-async function setConsent(request, env) {
-  const { personId, consent } = await request.json();
-  if (!personId) return reply({ error: 'personId required' }, 400);
-  await env.DB.prepare('UPDATE attendee SET consent = ? WHERE id = ?')
-    .bind(consent ? 1 : 0, personId).run();
-  return reply({ ok: true, consent: !!consent });
-}
-
 async function addCategory(request, env) {
   const { label } = await request.json();
   const text = (label || '').trim();
@@ -160,9 +167,8 @@ async function addCategory(request, env) {
     .bind(text).first();
   if (dup) return reply({ ok: true, id: dup.id, duplicate: true });
 
-  const id = await nextId(env, 'category', 'c');
-  await env.DB.prepare('INSERT INTO category (id, label, added_live) VALUES (?, ?, 1)')
-    .bind(id, text).run();
+  const id = await insertSeq(env, 'category', 'c', (cid) =>
+    env.DB.prepare('INSERT INTO category (id, label, added_live) VALUES (?, ?, 1)').bind(cid, text));
   return reply({ ok: true, id, label: text });
 }
 
@@ -170,8 +176,17 @@ async function addAttendee(request, env) {
   const { name } = await request.json();
   const text = (name || '').trim();
   if (!text) return reply({ error: 'name required' }, 400);
-  const id = await nextId(env, 'attendee', 'p');
-  await env.DB.prepare('INSERT INTO attendee (id, name) VALUES (?, ?)').bind(id, text).run();
+
+  /* Case-insensitive de-dupe, like addCategory. Two rows with the same name
+     would collapse into one node in the final network (and seed.py already
+     refuses a roster with duplicates for the same reason), so a walk-in who
+     is in fact already on the list just gets pointed back at their own id. */
+  const dup = await env.DB.prepare(
+    'SELECT id FROM attendee WHERE active = 1 AND lower(name) = lower(?)').bind(text).first();
+  if (dup) return reply({ ok: true, id: dup.id, duplicate: true });
+
+  const id = await insertSeq(env, 'attendee', 'p', (pid) =>
+    env.DB.prepare('INSERT INTO attendee (id, name) VALUES (?, ?)').bind(pid, text));
   return reply({ ok: true, id, name: text });
 }
 
@@ -201,7 +216,7 @@ async function setState(request, env) {
 async function exportJson(env) {
   const set = await settings(env);
   const people = await env.DB.prepare(
-    'SELECT a.id, a.name, a.consent FROM attendee a ' +
+    'SELECT a.id, a.name FROM attendee a ' +
     'WHERE a.active = 1 AND EXISTS (SELECT 1 FROM vote v WHERE v.person_id = a.id) ' +
     'ORDER BY a.id').all();
   const cats = await env.DB.prepare(
@@ -216,7 +231,10 @@ async function exportJson(env) {
     date: set.workshop_date || new Date().toISOString().slice(0, 10),
     frozen_at: new Date().toISOString(),
     state: set.state || 'open',
-    people: people.results.map(p => ({ id: p.id, name: p.name, consent: !!p.consent })),
+    /* consent is always true now — the workshop is small enough that everyone
+       is shown by name. The field stays so build.py / projection.js and their
+       tests keep a defined shape to read. */
+    people: people.results.map(p => ({ id: p.id, name: p.name, consent: true })),
     categories: cats.results.map(c => ({ id: c.id, label: c.label, live: !!c.added_live })),
     votes: votes.results.map(v => [v.person_id, v.category_id])
   };
@@ -243,11 +261,13 @@ export default {
     const join = hasJoin(request, env) || admin;
 
     try {
-      /* Export is public once frozen — that is what lets the published page
-         go live on a click instead of on a deploy. */
+      /* Export is public once frozen — that is what lets the published page go
+         live on a click instead of on a deploy. Before the freeze, anyone with
+         the join code can read it too, so /workshop can render the network live
+         while voting is open: it stays inside the room, not world-readable. */
       if (path === '/export' && request.method === 'GET') {
         const data = await exportJson(env);
-        if (data.state !== 'frozen' && !admin) return reply({ error: 'not frozen' }, 403, head);
+        if (data.state !== 'frozen' && !join) return reply({ error: 'not frozen' }, 403, head);
         return reply(data, 200, head);
       }
 
@@ -259,18 +279,20 @@ export default {
       if (path === '/vote' && request.method === 'POST') {
         return withCors(await castVote(request, env), head);
       }
-      if (path === '/consent' && request.method === 'POST') {
-        return withCors(await setConsent(request, env), head);
-      }
 
-      if (!admin) return reply({ error: 'admin token required' }, 403, head);
-
+      /* Adding a topic or your own name needs only the join code. Both are
+         additive and de-duped server-side, so the worst a leaked code buys is
+         noise — the same threat model as a vote. Attendees do this themselves;
+         the admin is no longer the funnel for walk-ins and late topics. */
       if (path === '/category' && request.method === 'POST') {
         return withCors(await addCategory(request, env), head);
       }
       if (path === '/attendee' && request.method === 'POST') {
         return withCors(await addAttendee(request, env), head);
       }
+
+      if (!admin) return reply({ error: 'admin token required' }, 403, head);
+
       if (path === '/state' && request.method === 'POST') {
         return withCors(await setState(request, env), head);
       }

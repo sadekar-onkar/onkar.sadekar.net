@@ -178,9 +178,9 @@
 
   /* The workshop projection: people linked by shared interests. Unlike collab,
      the data is not in the DOM as markup — it is a JSON blob emitted by
-     build.py (or fetched live from the API right after a freeze), because the
-     thresholding is interactive and needs the raw incidence data, not a
-     rendered picture of one particular threshold.
+     build.py (or polled live from the API while voting is open, via
+     figure.netData), because the thresholding is interactive and needs the raw
+     incidence data, not a rendered picture of one particular threshold.
 
      projection.js does all the maths. This only turns its output into nodes
      and links. Nothing here ever learns WHICH categories a pair shares — the
@@ -242,6 +242,20 @@
       });
       G.stats = res.stats;
       G.categories = res.categories;
+      return res;
+    };
+
+    /* Live re-poll (workshop.html while voting is open). Swap in a whole fresh
+       payload — new voters, new topics, new votes — and hand back a fresh node
+       list. Positions are NOT assigned here: the caller reconciles them against
+       the previous graph so the picture grows in place instead of jumping. */
+    G.setData = function (nextData) {
+      data = nextData;
+      var res = P.build(data, opts);
+      G.nodes = res.nodes;
+      G.stats = res.stats;
+      G.categories = res.categories;
+      G.data = data;
       return res;
     };
 
@@ -686,7 +700,7 @@
       }, { threshold: 0.02 }).observe(canvas);
     }
 
-    /* Both hooks are published BEFORE the first load, because the workshop
+    /* These hooks are published BEFORE the first load, because the workshop
        figure legitimately starts empty: on the day, the page is deployed with
        a placeholder and the real data arrives from the API a moment later.
        A figure that failed to load must still be revivable. */
@@ -711,6 +725,35 @@
     figure.netUpdate = function (opts) {
       if (!G || !G.rebuild) return null;
       var res = G.rebuild(opts);
+      hovered = selected = hoverEdge = null;
+      showTip(null);
+      ticks = 0;
+      start();
+      return res;
+    };
+
+    /* Feed in a fresh /export payload from a live poll without discarding the
+       layout. Nodes that persist (same id) keep their exact position and
+       velocity; a genuinely new person drops in near the centre and springs
+       outward as the sim relaxes. Returns the same shape as netUpdate, or null
+       if there is nothing to update or a drag is in progress (skip this tick,
+       the next poll will carry the same data). */
+    figure.netData = function (payload) {
+      if (!G || !G.setData || dragging) return null;
+      var prev = {};
+      G.nodes.forEach(function (n) { prev[n.id] = n; });
+      G.setData(payload);
+      G.nodes.forEach(function (n) {
+        var old = prev[n.id];
+        if (old) {
+          n.x = old.x; n.y = old.y; n.vx = old.vx; n.vy = old.vy;
+        } else {
+          n.x = W / 2 + (Math.random() - 0.5) * 60;
+          n.y = H / 2 + (Math.random() - 0.5) * 60;
+          n.vx = 0; n.vy = 0;
+        }
+      });
+      var res = G.rebuild();
       hovered = selected = hoverEdge = null;
       showTip(null);
       ticks = 0;

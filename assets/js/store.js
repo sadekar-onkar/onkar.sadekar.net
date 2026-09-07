@@ -2,7 +2,7 @@
  *
  * The whole point of this file is that it is the ONLY file that knows a server
  * exists. Swap the provider (Cloudflare Worker, Supabase, anything that speaks
- * the same five endpoints) and nothing else on the site changes.
+ * the same handful of endpoints) and nothing else on the site changes.
  *
  * Plain fetch, no SDK, no CDN script — the site's zero-third-party-request rule
  * survives, and the published network never loads this file at all.
@@ -211,11 +211,11 @@
       return flush();
     },
 
-    consent: function (yes) {
-      return request('POST', '/consent', { personId: person(), consent: !!yes });
-    },
-
     flush: flush,
+
+    /* --- self-service: a topic or a walk-in name, on the join code alone --- */
+    addCategory: function (label) { return request('POST', '/category', { label: label }); },
+    addAttendee: function (name) { return request('POST', '/attendee', { name: name }); },
 
     /* --- admin --- */
     setAdmin: function (token) {
@@ -227,8 +227,6 @@
     hasAdmin: function () {
       try { return !!sessionStorage.getItem(K.admin); } catch (e) { return false; }
     },
-    addCategory: function (label) { return request('POST', '/category', { label: label }); },
-    addAttendee: function (name) { return request('POST', '/attendee', { name: name }); },
     setState: function (patch) { return request('POST', '/state', patch); },
     exportData: function () { return request('GET', '/export'); }
   };

@@ -9,7 +9,8 @@
 CREATE TABLE IF NOT EXISTS attendee (
   id      TEXT PRIMARY KEY,          -- p01, p02, …
   name    TEXT NOT NULL,
-  consent INTEGER NOT NULL DEFAULT 0,-- 1 = show my name in the published network
+  consent INTEGER NOT NULL DEFAULT 1,-- vestigial: the app no longer collects or
+                                     -- reads this; every name is published.
   active  INTEGER NOT NULL DEFAULT 1
 );
 
