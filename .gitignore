@@ -11,3 +11,7 @@ workshop-api/roster.txt
 workshop-api/categories.txt
 workshop-api/seed.sql
 workshop-api/.wrangler/
+# new_workshop.py keeps the room code and admin token here, and the QR image
+# (it carries the room code).
+workshop-api/.session.json
+workshop-api/workshop-qr.png

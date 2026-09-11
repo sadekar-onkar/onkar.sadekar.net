@@ -11,6 +11,24 @@ working forever.
 
 ---
 
+## One command
+
+`new_workshop.py` runs everything in the sections below: the database and
+schema, a clean slate, deploy, secrets, seeding, and pointing the site at the
+API. It finishes by printing a QR code in the terminal and opening the live
+network in the browser.
+
+```bash
+./new_workshop.py            # asks for the name, date, room code, admin token
+./new_workshop.py --show     # reprint the QR code and links
+./new_workshop.py --keep     # redeploy the same workshop without wiping it
+```
+
+It **deletes the previous workshop's votes, names and topics**, asking first
+if there are any. The QR code points at `/vote#code=<room code>`, so nobody
+types the code: `store.js` reads it from the URL fragment, which never reaches
+a server. The codes are saved to `.session.json` (gitignored, mode 600).
+
 ## Setup, once
 
 ```bash

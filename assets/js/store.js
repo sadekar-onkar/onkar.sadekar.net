@@ -80,6 +80,28 @@
   function joinCode() { return lsGet(K.join, ''); }
   function person() { return lsGet(K.person, ''); }
 
+  /* A code different from the stored one belongs to a new workshop. The person
+     id and any queued votes from the old one would land on the wrong rows once
+     the database is re-seeded (ids are positional), so they go with it. */
+  function adoptCode(code) {
+    code = (code || '').trim();
+    if (!code) return;
+    if (code !== joinCode()) { lsDel(K.person); lsDel(K.queue); }
+    lsSet(K.join, code);
+  }
+
+  /* The QR code and the projector link carry the room code in the fragment —
+     /vote#code=NETS26, /workshop#code=NETS26 — so nobody has to type it. A
+     fragment never reaches a server, and it is stripped from the address bar
+     at once so it does not end up in a screenshot of the tab. */
+  try {
+    var fromUrl = /(?:^#|&)code=([^&]*)/.exec(location.hash || '');
+    if (fromUrl) {
+      adoptCode(decodeURIComponent(fromUrl[1]));
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  } catch (e) { /* malformed fragment, or no history API: type the code */ }
+
   /* ---------------------------------------------------------------- queue -- */
 
   function readQueue() {
@@ -186,7 +208,7 @@
 
     /* Verifying the code IS the bootstrap call — there is no separate login. */
     join: function (code) {
-      lsSet(K.join, (code || '').trim());
+      adoptCode(code);
       return Store.bootstrap().catch(function (err) {
         if (err.status === 401) lsDel(K.join);
         throw err;

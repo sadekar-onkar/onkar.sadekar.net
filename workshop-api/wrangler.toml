@@ -7,8 +7,8 @@ compatibility_date = "2025-01-01"
 # then paste the returned id below.
 [[d1_databases]]
 binding = "DB"
-database_name = "workshop"
-database_id = "62d6e8cf-dab5-4d1e-96fc-f8ee3f2dad9f"
+database_name = "onkars"
+database_id = "c684479e-9e1d-4d8f-85e7-de5be92a5794"
 
 [vars]
 # Comma-separated. The first entry is the fallback for non-matching origins.
