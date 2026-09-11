@@ -196,7 +196,7 @@
     try { data = JSON.parse(holder.textContent || '{}'); } catch (e) { return null; }
     if (!data || !data.people || !data.people.length) return null;
 
-    var opts = { method: 'jaccard', threshold: 0.4, alpha: 0.05 };
+    var opts = { method: 'jaccard', threshold: 0.4 };
     var first = P.build(data, opts);
 
     var G = {
@@ -217,7 +217,6 @@
       if (next) {
         if (next.method) opts.method = next.method;
         if (next.threshold !== undefined) opts.threshold = next.threshold;
-        if (next.alpha !== undefined) opts.alpha = next.alpha;
       }
       var res = P.build(data, opts);
       res.nodes.forEach(function (n, i) {

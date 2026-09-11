@@ -123,13 +123,6 @@ var loose = figure.netUpdate({ method: 'count', threshold: 1 });
 ok('loosening it adds them back', loose.stats.edges > strict.stats.edges,
    strict.stats.edges + ' -> ' + loose.stats.edges);
 
-var val = figure.netUpdate({ method: 'validated', alpha: 0.05 });
-ok('validated runs on real-shaped data and is sparser than raw count',
-   val.stats.edges <= loose.stats.edges,
-   'validated=' + val.stats.edges + ' count>=1=' + loose.stats.edges);
-ok('validated reports an FDR cutoff', val.stats.cutoff !== null &&
-   val.stats.cutoff !== undefined, 'cutoff=' + val.stats.cutoff);
-
 /* --- what actually gets painted --- */
 figure.netUpdate({ method: 'jaccard', threshold: 0.4 });
 ok('every painted coordinate is finite (no NaN from degenerate forces)',
@@ -193,29 +186,27 @@ ok('revived figure paints finite, spread-out nodes', (function () {
 })(), 'arcs=' + arcs.length);
 
 /* --- category rollup --- */
-ok('category counts come back', val.categories && val.categories.length === 13,
-   val.categories ? 'n=' + val.categories.length : 'missing');
+ok('category counts come back', jac.categories && jac.categories.length === 13,
+   jac.categories ? 'n=' + jac.categories.length : 'missing');
 ok('category counts are positive and plausible',
-   val.categories.every(function (c) { return c.count >= 0 && c.count <= 34; }));
+   jac.categories.every(function (c) { return c.count >= 0 && c.count <= 34; }));
 ok('the two live categories are flagged',
-   val.categories.filter(function (c) { return c.live; }).length === 3,
-   'live=' + val.categories.filter(function (c) { return c.live; }).length);
+   jac.categories.filter(function (c) { return c.live; }).length === 3,
+   'live=' + jac.categories.filter(function (c) { return c.live; }).length);
 
 /* --- privacy invariants on the real fixture --- */
 ok('anonymised people carry no name',
-   val.nodes.filter(function (n) { return n.anon; })
+   jac.nodes.filter(function (n) { return n.anon; })
             .every(function (n) { return /^Anonymous \d+$/.test(n.label); }));
 ok('8 people are anonymous in the published data',
-   val.nodes.filter(function (n) { return n.anon; }).length === 8,
-   'got ' + val.nodes.filter(function (n) { return n.anon; }).length);
+   jac.nodes.filter(function (n) { return n.anon; }).length === 8,
+   'got ' + jac.nodes.filter(function (n) { return n.anon; }).length);
 
 print('');
 print('edges by method:  count>=1 ' + loose.stats.edges +
       '   jaccard>=0.4 ' + jac.stats.edges +
       '   jaccard>=0.9 ' + strict.stats.edges +
-      '   validated ' + val.stats.edges +
-      '   (of ' + val.stats.possible + ' possible pairs)');
-print('communities:      ' + jac.stats.communities + ' at jaccard 0.4, ' +
-      val.stats.communities + ' validated');
+      '   (of ' + jac.stats.possible + ' possible pairs)');
+print('communities:      ' + jac.stats.communities + ' at jaccard 0.4');
 print('');
 print(fails ? fails + ' FAILURE(S)' : 'all render tests passed');

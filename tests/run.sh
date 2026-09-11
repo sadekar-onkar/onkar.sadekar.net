@@ -31,8 +31,7 @@ run "parse" tests/parse.test.js "assets/js/projection.js assets/js/network.js \
 assets/js/store.js assets/js/vote.js assets/js/wsadmin.js assets/js/workshop.js \
 assets/js/site.js assets/js/particles.js"
 
-# 2. the projection maths, against exact values from Python
-[ -f tests/hyper_ref.json ] || python3 tests/gen_hyper_ref.py
+# 2. the projection maths, on a planted two-cluster dataset
 run "projection" tests/projection.test.js
 
 # 3. the rendering path, headless

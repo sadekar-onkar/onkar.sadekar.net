@@ -13,12 +13,6 @@ copied into `_site/`.
 
 **projection.test.js** checks `assets/js/projection.js`:
 
-- the hypergeometric tail against 1548 cases computed independently in Python
-  with exact rational arithmetic (`gen_hyper_ref.py`). Two implementations
-  sharing no code is the whole point — agreement to ~1e-13 is meaningful,
-  whereas testing the JS against itself would not be.
-- Benjamini-Hochberg against the worked example in the 1995 paper, which
-  rejects exactly 4 of its 15 hypotheses.
 - a planted two-cluster dataset: the projection must recover both cliques and
   draw no edge between them.
 - the privacy invariants — no node carries its category ids, no link carries
@@ -32,5 +26,3 @@ builds, re-thresholds in place, survives being revived from a hidden figure,
 and paints finite, spread-out coordinates — the failure mode when a canvas is
 measured at zero size is every node stacked on one point, which is invisible in
 code review and obvious here.
-
-`hyper_ref.json` is generated and can be deleted; `run.sh` rebuilds it.

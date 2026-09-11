@@ -173,20 +173,17 @@ the pages then say they are not configured. Nothing else on the site is
 affected, and no other page ever gets the API `<meta>` — the
 zero-third-party-request rule still holds everywhere else.
 
-**The maths** is in `assets/js/projection.js`, and it is the part worth being
-careful with. A one-mode projection of a bipartite graph is dense and
-hub-driven: raw co-occurrence makes whoever ticked the most boxes look like the
-centre of the room. Three views ship behind a toggle — raw count, Jaccard, and
-a statistically validated network (hypergeometric test per pair,
-Benjamini-Hochberg across all pairs; Tumminello et al. 2011). **Expect the
-validated view to keep zero edges on a short ballot** — with 13 categories even
-a perfect overlap cannot clear the corrected threshold, and the page says so in
-those words rather than showing an empty canvas. That is a fact about the ballot
-length, not a bug; do not "fix" it by dropping the correction.
+**The maths** is in `assets/js/projection.js`. A one-mode projection of a
+bipartite graph is dense and hub-driven: raw co-occurrence makes whoever ticked
+the most boxes look like the centre of the room. Two views ship behind a toggle
+— raw shared count, and Jaccard (overlap over union, the default) — each with
+its own threshold slider. Link width follows whichever measure is active
+(`0.6 + 0.35 × shared` or `0.6 + 3 × Jaccard`, capped at 3px). A statistically
+validated view (hypergeometric test + Benjamini-Hochberg) was removed in Sept
+2026 at Onkar's request, along with the prose sections that explained it; do
+not re-add either without being asked.
 
-Run `./tests/run.sh` after touching any of this. The hypergeometric tail is
-checked against exact rational arithmetic in Python, and BH against the worked
-example in the 1995 paper.
+Run `./tests/run.sh` after touching any of this.
 
 **Names.** The workshop is small and everyone knows everyone, so there is no
 consent step — every attendee is shown by name (this replaced an opt-in

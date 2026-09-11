@@ -941,8 +941,7 @@ def build_workshop():
     out += ('        <div class="ws-controls">\n'
             '          <div class="ws-methods" role="group" aria-label="How to draw a link">\n')
     for key, label, on in (('count', 'Shared count', False),
-                           ('jaccard', 'Jaccard', True),
-                           ('validated', 'Validated', False)):
+                           ('jaccard', 'Jaccard', True)):
         out += ('            <button class="ws-method" type="button" data-ws-method="%s" '
                 'data-on="%s" aria-pressed="%s">%s</button>\n'
                 % (key, str(on).lower(), str(on).lower(), e(label)))

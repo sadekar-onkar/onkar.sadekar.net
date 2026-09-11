@@ -4,23 +4,14 @@
  * gets published is its one-mode projection onto people, so the picture answers
  * "who should talk to whom" instead of "what did each person like".
  *
- * Three ways to draw an edge, because the naive one is misleading:
+ * Two ways to draw an edge, because the naive one is misleading:
  *
  *   count      shared categories >= t. Honest but hub-driven — someone who
  *              ticks everything links to everyone.
  *   jaccard    |A n B| / |A u B| >= t. Normalises the enthusiastic tickers
  *              away. The sensible default.
- *   validated  a hypergeometric test per pair against the null model "these
- *              two people picked their categories independently", with
- *              Benjamini-Hochberg FDR across all pairs. This is the
- *              statistically validated network of Tumminello et al. (2011),
- *              the standard tool for exactly this projection.
  *
- * Expect `validated` to keep very few edges when there are few voters. That is
- * a real result about a small sample, not a bug — the point of shipping all
- * three is that the reader can see the raw picture collapse as the evidential
- * bar rises, rather than being handed one arbitrary threshold and asked to
- * trust it.
+ * Link width follows whichever of the two measures is active.
  *
  * Privacy: nothing here ever exposes WHICH categories a person or a pair
  * chose. Only counts leave this file. See the note in build.py's build_workshop.
@@ -30,51 +21,6 @@
 
 (function () {
   'use strict';
-
-  /* ------------------------------------------------------------- combinatorics -- */
-
-  /* log(n!) for n up to `max`, built once. The workshop has tens of categories,
-     so an exact cumulative table beats a Stirling/Lanczos approximation and is
-     shorter. Working in logs keeps the binomials from overflowing. */
-  function logFactorials(max) {
-    var lf = new Float64Array(max + 1);
-    for (var i = 2; i <= max; i++) lf[i] = lf[i - 1] + Math.log(i);
-    return lf;
-  }
-
-  function logChoose(lf, n, k) {
-    if (k < 0 || k > n || n < 0) return -Infinity;
-    return lf[n] - lf[k] - lf[n - k];
-  }
-
-  /* P(X >= x) for X ~ Hypergeometric(N, K, n).
-   *
-   * N categories on the ballot, person A picked K of them, person B picked n,
-   * and they share x. Under independence the overlap is hypergeometric, so this
-   * is the probability of an overlap at least this large by chance alone. */
-  function hyperSurvival(lf, N, K, n, x) {
-    var lo = Math.max(x, 0, n - (N - K));
-    var hi = Math.min(K, n);
-    if (lo > hi) return 0;
-    if (lo <= Math.max(0, n - (N - K))) return 1; // every outcome qualifies
-    var denom = logChoose(lf, N, n), sum = 0;
-    for (var s = lo; s <= hi; s++) {
-      sum += Math.exp(logChoose(lf, K, s) + logChoose(lf, N - K, n - s) - denom);
-    }
-    return sum > 1 ? 1 : sum;
-  }
-
-  /* Benjamini-Hochberg. Returns the largest p-value that stays significant, or
-     -1 if nothing does. `m` is the total number of tests, which must include
-     the pairs we never scored (their p is 1) or the correction is too weak. */
-  function bhCutoff(pvals, m, alpha) {
-    var sorted = pvals.slice().sort(function (a, b) { return a - b; });
-    var cut = -1;
-    for (var i = 0; i < sorted.length; i++) {
-      if (sorted[i] <= (i + 1) / m * alpha) cut = sorted[i];
-    }
-    return cut;
-  }
 
   /* ------------------------------------------------------------------- layout -- */
 
@@ -149,7 +95,7 @@
 
   /* data: { people:[{id,name,consent}], categories:[{id,label,live}],
              votes:[[personId, categoryId], ...] }
-     opts: { method, threshold, alpha } */
+     opts: { method, threshold } */
   function build(data, opts) {
     opts = opts || {};
     var method = opts.method || 'jaccard';
@@ -177,8 +123,7 @@
     }
 
     /* Score every pair once. */
-    var lf = logFactorials(m + 1);
-    var pairs = [], pvals = [];
+    var pairs = [];
     var totalPairs = n * (n - 1) / 2;
 
     for (i = 0; i < n; i++) {
@@ -187,45 +132,20 @@
         for (var c = 0; c < m; c++) shared += B[i][c] & B[j][c];
         if (!shared) continue;
         var union = deg[i] + deg[j] - shared;
-        var pair = {
-          a: i, b: j,
-          shared: shared,
-          jaccard: union ? shared / union : 0,
-          p: 1
-        };
-        if (method === 'validated') {
-          pair.p = hyperSurvival(lf, m, deg[i], deg[j], shared);
-          pvals.push(pair.p);
-        }
-        pairs.push(pair);
+        pairs.push({ a: i, b: j, shared: shared, jaccard: union ? shared / union : 0 });
       }
     }
 
-    /* Keep the edges this method believes in. */
-    var links = [], cutoff = null, minP = null, bar = null;
-    if (method === 'validated') {
-      var alpha = opts.alpha === undefined ? 0.05 : opts.alpha;
-      cutoff = bhCutoff(pvals, totalPairs, alpha);
-
-      /* When nothing survives, the interesting question is whether anything
-         COULD have. These two numbers answer it: the smallest p-value in the
-         data, and the bar the smallest one has to clear (BH at rank 1). If
-         minP > bar, the ballot was simply too short for any pair to reach
-         significance no matter how perfectly two people agreed — which is a
-         statement about the study design, not about these people. */
-      minP = pvals.reduce(function (a, p) { return p < a ? p : a; }, 1);
-      bar = alpha / totalPairs;
-      pairs.forEach(function (pr) {
-        if (cutoff >= 0 && pr.p <= cutoff) {
-          links.push({ a: pr.a, b: pr.b, w: 1.2, shared: pr.shared, p: pr.p });
-        }
-      });
-    } else if (method === 'count') {
+    /* Keep the edges this method believes in. Width follows the same measure
+       the threshold is on, capped at 3px so one heavy link cannot swamp the
+       picture. */
+    var links = [];
+    if (method === 'count') {
       var t = opts.threshold === undefined ? 2 : opts.threshold;
       pairs.forEach(function (pr) {
         if (pr.shared >= t) {
           links.push({ a: pr.a, b: pr.b, w: Math.min(0.6 + pr.shared * 0.35, 3),
-                       shared: pr.shared, p: pr.p });
+                       shared: pr.shared });
         }
       });
     } else {
@@ -233,7 +153,7 @@
       pairs.forEach(function (pr) {
         if (pr.jaccard >= tj) {
           links.push({ a: pr.a, b: pr.b, w: Math.min(0.6 + pr.jaccard * 3, 3),
-                       shared: pr.shared, jaccard: pr.jaccard, p: pr.p });
+                       shared: pr.shared, jaccard: pr.jaccard });
         }
       });
     }
@@ -284,9 +204,6 @@
         density: totalPairs ? links.length / totalPairs : 0,
         isolated: nodes.filter(function (nd) { return !nd.links; }).length,
         communities: nComm,
-        cutoff: cutoff,
-        minP: minP,
-        bar: bar,
         maxShared: pairs.reduce(function (a, pr) { return Math.max(a, pr.shared); }, 0)
       },
       categories: cats.map(function (c, k) {
@@ -295,11 +212,5 @@
     };
   }
 
-  window.WorkshopProjection = {
-    build: build,
-    // exported for the test harness
-    _hyperSurvival: hyperSurvival,
-    _bhCutoff: bhCutoff,
-    _logFactorials: logFactorials
-  };
+  window.WorkshopProjection = { build: build };
 })();

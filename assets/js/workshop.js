@@ -11,10 +11,8 @@
  *    and is world-public after it.
  *
  * 2. The threshold controls. A projection drawn at one arbitrary cutoff asks
- *    to be trusted; a projection you can re-threshold shows its own
- *    sensitivity. Dragging from a dense count-based graph to the sparse
- *    statistically validated one, and watching most edges evaporate, is the
- *    honest summary of what a few dozen votes can support.
+ *    to be trusted; a projection you can re-threshold, by shared count or by
+ *    Jaccard similarity, shows its own sensitivity.
  *
  * Needs projection.js and network.js (and store.js only for the live poll).
  */
@@ -65,15 +63,6 @@
       format: function (v) { return v.toFixed(2); },
       apply: function (v) { return { threshold: v }; },
       note: 'Overlap divided by union, so enthusiasm cancels out. A reasonable default.'
-    },
-    validated: {
-      name: 'False discovery rate',
-      values: function () { return [0.001, 0.005, 0.01, 0.02, 0.05, 0.1]; },
-      format: function (v) { return v < 0.01 ? v.toFixed(3) : v.toFixed(2); },
-      apply: function (v) { return { alpha: v }; },
-      note: 'Each pair tested against the null that the two chose independently ' +
-            '(hypergeometric), with Benjamini-Hochberg correction across all pairs. ' +
-            'Few surviving edges is a statement about sample size, not a bug.'
     }
   };
 
@@ -95,9 +84,6 @@
       [s.communities, s.communities === 1 ? 'group' : 'groups'],
       [s.isolated, 'unconnected']
     ];
-    if (method === 'validated' && s.cutoff >= 0) {
-      bits.push([s.cutoff.toExponential(1), 'p cutoff']);
-    }
 
     el.stats.textContent = '';
     bits.forEach(function (b) {
@@ -112,26 +98,7 @@
       el.stats.appendChild(d);
     });
 
-    var note = scale ? scale.note : '';
-
-    /* An empty canvas reads as a broken page, so say why it is empty. When the
-       smallest p-value in the data cannot clear the rank-1 Benjamini-Hochberg
-       bar, no pair could have passed however perfectly two people agreed: the
-       ballot was too short to carry that much evidence. That is a fact about
-       the study design and worth stating plainly rather than hiding. */
-    if (method === 'validated' && s.edges === 0) {
-      if (s.minP !== null && s.bar !== null && s.minP > s.bar) {
-        note = 'No link survives, and none could: with ' + s.categories +
-          ' categories the strongest possible agreement gives p = ' +
-          s.minP.toExponential(1) + ', while correcting for ' + s.possible +
-          ' pairs demands p < ' + s.bar.toExponential(1) + '. A longer ballot, ' +
-          'not more people, is what this test would need. ' + note;
-      } else {
-        note = 'No pair clears the corrected threshold at this false discovery ' +
-          'rate. ' + note;
-      }
-    }
-    if (el.note) el.note.textContent = note;
+    if (el.note) el.note.textContent = scale ? scale.note : '';
   }
 
   /* Aggregate popularity of each category. Safe to publish: it is a count over
@@ -188,8 +155,7 @@
 
     /* Land on a sensible default per method rather than snapping to 0. */
     var want = method === 'count' ? Math.min(1, values.length - 1)
-             : method === 'jaccard' ? values.indexOf(0.4)
-             : values.indexOf(0.05);
+             : values.indexOf(0.4);
     if (!preserve || el.slider.value === '') {
       el.slider.value = want >= 0 ? want : Math.floor(values.length / 2);
     }
