@@ -4,7 +4,8 @@
  * built into the page and never written to localStorage: closing the tab ends
  * the session. All authority is server-side — this file only asks.
  *
- * Live counts live here and deliberately nowhere else. Putting them on the
+ * Live counts live here and deliberately nowhere else. Each project shows
+ * "ranked 1st · ranked at all". Putting them on the
  * attendees' phones would bias later voting toward whatever is already
  * winning, which is exactly the artefact this workshop is trying to measure.
  *
@@ -34,6 +35,9 @@
     catInput: root.querySelector('[data-adm-cat-input]'),
     personForm: root.querySelector('[data-adm-person-form]'),
     personInput: root.querySelector('[data-adm-person-input]'),
+    groupsForm: root.querySelector('[data-adm-groups-form]'),
+    groupsInput: root.querySelector('[data-adm-groups-input]'),
+    spreadInput: root.querySelector('[data-adm-spread-input]'),
     counts: root.querySelector('[data-adm-counts]'),
     voters: root.querySelector('[data-adm-voters]'),
     freeze: root.querySelector('[data-adm-freeze]'),
@@ -99,7 +103,20 @@
   }
 
   submitter(el.catForm, el.catInput,
-    function (v) { return Store.addCategory(v); }, 'Category added');
+    function (v) { return Store.addCategory(v); }, 'Project added');
+
+  if (el.groupsForm) {
+    el.groupsForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var groups = parseInt(el.groupsInput.value, 10);
+      var spread = parseInt(el.spreadInput.value, 10);
+      if (!(groups >= 1) || !(spread >= 0)) return;
+      Store.setState({ groups: groups, spread: spread }).then(function () {
+        flash(groups + ' groups, sizes ±' + spread + ' — /workshop picks this up within seconds');
+        refresh();
+      }, function (err) { setStatus('error', err.message); });
+    });
+  }
   submitter(el.personForm, el.personInput,
     function (v) { return Store.addAttendee(v); }, 'Attendee added');
   submitter(el.talkForm, el.talkInput,
@@ -140,7 +157,7 @@
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
 
         flash('Downloaded workshop.json — ' + json.people.length + ' people, ' +
-              json.votes.length + ' votes');
+              json.votes.length + ' rankings');
       }, function (err) { setStatus('error', err.message); });
     });
   }
@@ -149,10 +166,14 @@
 
   function renderCounts() {
     if (!el.counts) return;
-    var counts = {};
-    (data.counts || []).forEach(function (c) { counts[c.category_id] = c.n; });
+    var counts = {}, firsts = {};
+    (data.counts || []).forEach(function (c) {
+      counts[c.category_id] = c.n;
+      firsts[c.category_id] = c.first || 0;
+    });
     var cats = (data.categories || []).slice().sort(function (a, b) {
-      return (counts[b.id] || 0) - (counts[a.id] || 0);
+      return (firsts[b.id] || 0) - (firsts[a.id] || 0) ||
+             (counts[b.id] || 0) - (counts[a.id] || 0);
     });
     var max = cats.reduce(function (a, c) { return Math.max(a, counts[c.id] || 0); }, 0) || 1;
 
@@ -164,7 +185,8 @@
 
       var label = document.createElement('span');
       label.className = 'ws-cat-label';
-      label.textContent = c.label;                    // untrusted
+      label.textContent = c.short || c.label;         // untrusted
+      label.title = c.label;
       if (c.added_live) {
         var tag = document.createElement('em');
         tag.textContent = ' live';
@@ -174,10 +196,12 @@
       var bar = document.createElement('span');
       bar.className = 'ws-cat-bar';
       bar.style.setProperty('--pct', Math.round(n / max * 100) + '%');
+      bar.style.setProperty('--pct1', Math.round((firsts[c.id] || 0) / max * 100) + '%');
 
       var num = document.createElement('span');
       num.className = 'ws-cat-n';
-      num.textContent = String(n);
+      num.textContent = (firsts[c.id] || 0) + ' · ' + n;
+      num.title = 'ranked 1st · ranked at all';
 
       li.appendChild(label);
       li.appendChild(bar);
@@ -192,6 +216,12 @@
     }
     if (el.talkInput && document.activeElement !== el.talkInput) {
       el.talkInput.value = data.currentTalk || '';
+    }
+    if (el.groupsInput && document.activeElement !== el.groupsInput &&
+        document.activeElement !== el.spreadInput) {
+      el.groupsInput.value = data.groups || 5;
+      el.spreadInput.value = data.spread === undefined ? 1 : data.spread;
+      el.groupsInput.max = Math.min(10, (data.categories || []).length || 10);
     }
     if (el.stateLabel) {
       el.stateLabel.textContent = data.state === 'frozen' ? 'Frozen' : 'Open';
@@ -217,7 +247,8 @@
         stopPoll();
         return;
       }
-      setStatus('', '');
+      // keep a just-flashed confirmation; clear only stale errors
+      if (!el.status || el.status.dataset.kind !== 'ok') setStatus('', '');
       render();
     }, function (err) {
       if (err.status === 401) {

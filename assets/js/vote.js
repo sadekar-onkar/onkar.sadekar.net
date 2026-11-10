@@ -2,14 +2,16 @@
  *
  * Four states, one at a time: join -> who are you -> ballot -> closed.
  *
- * Every label that reaches the DOM here (attendee names, category labels) was
+ * Every label that reaches the DOM here (attendee names, project labels) was
  * typed by a person — the roster, the admin screen, or another attendee's
  * phone — so it is set with textContent and never innerHTML. Treat it as
  * untrusted.
  *
- * Voting is optimistic: the chip flips the instant it is tapped and the write
- * goes to the queue in store.js. On a bad link the UI stays responsive and the
- * queue drains later; the (person, category) upsert makes that safe.
+ * The ballot is a ranking of up to four projects: tapping a project adds it at
+ * the next rank, tapping it again removes it, and the arrows reorder. Voting
+ * is optimistic: the screen changes the instant it is tapped and the whole
+ * ranking goes to the queue in store.js. On a bad link the UI stays responsive
+ * and the queue drains later; replacing the ballot whole makes that safe.
  *
  * Needs store.js. Publishes nothing.
  */
@@ -21,7 +23,10 @@
   if (!root || !window.WorkshopStore) return;
 
   var Store = window.WorkshopStore;
-  var POLL_MS = 10000;
+  /* Only a freeze or a new "current talk" banner needs picking up; nothing
+     else changes under a voter. 30s keeps forty phones well inside the free
+     tier for a week. */
+  var POLL_MS = 30000;
 
   var el = {
     status: root.querySelector('[data-ws-status]'),
@@ -33,9 +38,8 @@
     addNameForm: root.querySelector('[data-ws-addname-form]'),
     addNameInput: root.querySelector('[data-ws-addname-input]'),
     talk: root.querySelector('[data-ws-talk]'),
-    chips: root.querySelector('[data-ws-chips]'),
-    addCatForm: root.querySelector('[data-ws-addcat-form]'),
-    addCatInput: root.querySelector('[data-ws-addcat-input]'),
+    ranking: root.querySelector('[data-ws-ranking]'),
+    chips: root.querySelector('[data-ws-projects]'),
     me: root.querySelector('[data-ws-me]'),
     tally: root.querySelector('[data-ws-tally]'),
     change: root.querySelector('[data-ws-change]')
@@ -44,7 +48,8 @@
   var state = {
     screen: null,
     data: null,
-    mine: {},          // categoryId -> true
+    ranking: [],       // category ids, favourite first
+    edits: 0,          // bumped on every local change; see apply()
     filter: '',
     timer: null
   };
@@ -176,64 +181,148 @@
 
   /* ---------------------------------------------------------------- ballot -- */
 
-  function renderChips() {
+  var ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
+
+  function maxRanks() { return (state.data && state.data.maxRanks) || 4; }
+
+  function catById(id) {
+    return (state.data.categories || []).filter(function (c) { return c.id === id; })[0];
+  }
+
+  /* Every change sends the whole ranking. Optimistic: the screen redraws at
+     once and the queue in store.js makes sure the write lands. */
+  function commit() {
+    state.edits++;
+    renderBallot();
+    Store.ballot(state.ranking).then(refreshStatus, refreshStatus);
+  }
+
+  function toggle(id) {
+    var i = state.ranking.indexOf(id);
+    if (i !== -1) state.ranking.splice(i, 1);
+    else if (state.ranking.length < maxRanks()) state.ranking.push(id);
+    else {
+      setStatus('error', 'You have ranked ' + maxRanks() + ' already — remove one first.');
+      setTimeout(refreshStatus, 2500);
+      return;
+    }
+    commit();
+  }
+
+  function move(i, by) {
+    var j = i + by;
+    if (j < 0 || j >= state.ranking.length) return;
+    var t = state.ranking[i];
+    state.ranking[i] = state.ranking[j];
+    state.ranking[j] = t;
+    commit();
+  }
+
+  function smallBtn(text, label, fn, disabled) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ws-rank-btn';
+    b.textContent = text;
+    b.setAttribute('aria-label', label);
+    b.disabled = !!disabled;
+    b.addEventListener('click', fn);
+    return b;
+  }
+
+  /* "Your ranking": the picks in order, each movable and removable. */
+  function renderRanking() {
+    if (!el.ranking) return;
+    el.ranking.textContent = '';
+    if (!state.ranking.length) {
+      var empty = document.createElement('li');
+      empty.className = 'ws-rank-empty';
+      empty.textContent = 'Nothing yet — tap a project below. Your first tap is your favourite.';
+      el.ranking.appendChild(empty);
+      return;
+    }
+    state.ranking.forEach(function (id, i) {
+      var c = catById(id);
+      if (!c) return;
+      var li = document.createElement('li');
+      li.className = 'ws-rank-item';
+      var n = document.createElement('span');
+      n.className = 'ws-rank-n';
+      n.textContent = ORD[i];
+      var label = document.createElement('span');
+      label.className = 'ws-rank-label';
+      label.textContent = c.short || c.label;            // untrusted: never innerHTML
+      var tools = document.createElement('span');
+      tools.className = 'ws-rank-tools';
+      tools.appendChild(smallBtn('↑', 'Move up', function () { move(i, -1); }, i === 0));
+      tools.appendChild(smallBtn('↓', 'Move down', function () { move(i, 1); },
+                                 i === state.ranking.length - 1));
+      tools.appendChild(smallBtn('×', 'Remove', function () { toggle(id); }));
+      li.appendChild(n);
+      li.appendChild(label);
+      li.appendChild(tools);
+      el.ranking.appendChild(li);
+    });
+  }
+
+  /* The projects themselves: tap to add at the next rank, tap again to drop. */
+  function renderProjects() {
     if (!el.chips) return;
     var cats = state.data.categories || [];
+    var full = state.ranking.length >= maxRanks();
     el.chips.textContent = '';
 
     cats.forEach(function (c) {
+      var at = state.ranking.indexOf(c.id);
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'ws-chip';
-      btn.dataset.on = state.mine[c.id] ? 'true' : 'false';
-      btn.setAttribute('aria-pressed', state.mine[c.id] ? 'true' : 'false');
-      if (c.added_live) btn.dataset.live = 'true';
+      btn.className = 'ws-project';
+      btn.dataset.on = at !== -1 ? 'true' : 'false';
+      btn.dataset.full = full && at === -1 ? 'true' : 'false';
+      btn.setAttribute('aria-pressed', at !== -1 ? 'true' : 'false');
 
-      var label = document.createElement('span');
-      label.textContent = c.label;       // untrusted: never innerHTML
-      btn.appendChild(label);
+      var head = document.createElement('span');
+      head.className = 'ws-project-head';
+      var short = document.createElement('b');
+      short.textContent = c.short || c.label;             // untrusted: never innerHTML
+      head.appendChild(short);
+      if (at !== -1) {
+        var badge = document.createElement('span');
+        badge.className = 'ws-project-rank';
+        badge.textContent = ORD[at];
+        head.appendChild(badge);
+      }
+      btn.appendChild(head);
 
-      btn.addEventListener('click', function () {
-        var on = !state.mine[c.id];
-        if (on) state.mine[c.id] = true; else delete state.mine[c.id];
-        btn.dataset.on = on ? 'true' : 'false';
-        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        renderTally();
-        Store.vote(c.id, on).then(refreshStatus, refreshStatus);
-      });
+      if (c.short && c.label && c.label !== c.short) {
+        var title = document.createElement('span');
+        title.className = 'ws-project-title';
+        title.textContent = c.label;
+        btn.appendChild(title);
+      }
+      if (c.description) {
+        var d = document.createElement('span');
+        d.className = 'ws-project-desc';
+        d.textContent = c.description;
+        btn.appendChild(d);
+      }
 
+      btn.addEventListener('click', function () { toggle(c.id); });
       el.chips.appendChild(btn);
     });
   }
 
   function renderTally() {
     if (!el.tally) return;
-    var n = Object.keys(state.mine).length;
+    var n = state.ranking.length, max = maxRanks();
     el.tally.textContent = n === 0
-      ? 'Nothing picked yet'
-      : n + (n === 1 ? ' interest marked' : ' interests marked');
+      ? 'Rank up to ' + max + ' projects. Fewer is fine.'
+      : n + ' of ' + max + ' ranked · saved automatically';
   }
 
-  /* Missing a topic? Add it, and tick it — you almost certainly want it on.
-     The poll (or the refresh below) brings the new chip in for everyone. */
-  if (el.addCatForm) {
-    el.addCatForm.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var label = (el.addCatInput.value || '').trim();
-      if (!label) return;
-      setStatus('pending', 'Adding…');
-      Store.addCategory(label).then(function (res) {
-        setStatus('', '');
-        el.addCatInput.value = '';
-        if (res && res.id) {
-          state.mine[res.id] = true;
-          Store.vote(res.id, true).then(refreshStatus, refreshStatus);
-        }
-        refresh();
-      }, function (err) {
-        setStatus('error', err.message || 'Could not add that topic. Try again.');
-      });
-    });
+  function renderBallot() {
+    renderRanking();
+    renderProjects();
+    renderTally();
   }
 
   /* --------------------------------------------------------------- refresh -- */
@@ -241,7 +330,7 @@
   /* Rendering is driven entirely by a /bootstrap payload, so a poll that finds
      a new category, a new current talk, or a freeze redraws the right screen
      without any special-case transition code. */
-  function apply(data) {
+  function apply(data, editsAtRequest) {
     state.data = data;
 
     if (data.state === 'frozen') { show('closed'); stopPoll(); return; }
@@ -262,28 +351,29 @@
       return;
     }
 
-    /* Server state wins on load, but never clobber writes still queued on this
-       phone — those are newer than anything /bootstrap can know about. */
+    /* Server state wins on load, but never clobber a ballot still queued on
+       this phone — it is newer than anything /bootstrap can know about. */
     var queued = Store.queued();
-
-    state.mine = {};
-    (data.mine || []).forEach(function (id) { state.mine[id] = true; });
-    Object.keys(queued).forEach(function (id) {
-      if (queued[id]) state.mine[id] = true; else delete state.mine[id];
-    });
+    var known = {};
+    (data.categories || []).forEach(function (c) { known[c.id] = true; });
+    /* A response to a request sent BEFORE the latest tap describes an older
+       ballot, even once the queue has drained — keep what is on screen. */
+    var stale = editsAtRequest !== undefined && editsAtRequest !== state.edits;
+    var source = stale ? state.ranking : (queued || data.mine || []);
+    state.ranking = source.filter(function (id) { return known[id]; });
 
     if (el.me) el.me.textContent = me.name;
     if (el.talk) {
       el.talk.textContent = data.currentTalk || '';
       el.talk.hidden = !data.currentTalk;
     }
-    renderChips();
-    renderTally();
+    renderBallot();
     show('ballot');
   }
 
   function refresh() {
-    return Store.bootstrap().then(apply, function (err) {
+    var at = state.edits;
+    return Store.bootstrap().then(function (data) { apply(data, at); }, function (err) {
       if (err.status === 401) { show('join'); return; }
       setStatus('offline', 'Cannot reach the server — retrying');
     });

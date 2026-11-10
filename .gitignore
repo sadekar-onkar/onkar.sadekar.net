@@ -15,3 +15,4 @@ workshop-api/.wrangler/
 # (it carries the room code).
 workshop-api/.session.json
 workshop-api/workshop-qr.png
+workshop-api/.dev.vars

@@ -885,7 +885,7 @@ def anonymise(data):
 
     The workshop is small and everyone knows everyone, so there is no consent
     step and every name is published. This still honours an explicit
-    `consent: false` on a person if one is ever present (projection.js renders
+    `consent: false` on a person if one is ever present (groups.js renders
     them as "Anonymous N", and stripping the name here is what keeps it out of
     view-source) — but nothing in the live flow sets it.
 
@@ -914,12 +914,19 @@ def anonymise(data):
             'consent': consent,
         })
 
-    votes = [[remap[a], b] for a, b in data.get('votes', []) if a in remap]
+    # [person, project, rank] — the rank rides along untouched
+    votes = [[remap[v[0]]] + list(v[1:]) for v in data.get('votes', []) if v[0] in remap]
     return dict(data, people=out_people, votes=votes)
 
 
 def build_workshop():
-    """The permanent artefact: the person-person projection of the votes."""
+    """The permanent artefact: the ranked ballots, split into project groups.
+
+    Everything interactive (how many groups, how even, which of the four
+    solutions) is solved in the browser by groups.js, so the page carries the
+    ballots themselves. That is a change from the old interest projection, which
+    published counts only: a group list necessarily says who ranked what.
+    """
     meta, body = read('workshop.md')
     path = os.path.join(CONTENT, 'workshop.json')
     data = {}
@@ -932,26 +939,33 @@ def build_workshop():
     n_cats = len(data.get('categories', []))
 
     out = page_head(meta.get('eyebrow', 'Workshop'),
-                    meta.get('title', 'Workshop network'), meta.get('lede', ''))
+                    meta.get('title', 'Workshop groups'), meta.get('lede', ''))
 
     out += '  <section class="section">\n    <div class="wrap">\n'
     out += '      <div class="ws-figwrap" data-workshop>\n'
 
-    # controls
+    # controls: solution (round), number of groups, size tolerance
     out += ('        <div class="ws-controls">\n'
-            '          <div class="ws-methods" role="group" aria-label="How to draw a link">\n')
-    for key, label, on in (('count', 'Shared count', False),
-                           ('jaccard', 'Jaccard', True)):
-        out += ('            <button class="ws-method" type="button" data-ws-method="%s" '
-                'data-on="%s" aria-pressed="%s">%s</button>\n'
-                % (key, str(on).lower(), str(on).lower(), e(label)))
+            '          <div class="ws-methods" role="group" aria-label="Which solution">\n')
+    for r, label in ((1, '1st choices'), (2, '2nd'), (3, '3rd'), (4, '4th')):
+        on = 'true' if r == 1 else 'false'
+        out += ('            <button class="ws-method" type="button" data-ws-round="%d" '
+                'data-on="%s" aria-pressed="%s">%s</button>\n' % (r, on, on, e(label)))
     out += '          </div>\n'
-    out += ('          <label class="ws-slider">\n'
-            '            <span data-ws-threshold-name>Jaccard similarity, at least</span>\n'
-            '            <input type="range" data-ws-threshold min="0" max="10" value="5"\n'
-            '                   aria-label="Link threshold">\n'
-            '            <output data-ws-threshold-label>0.40</output>\n'
-            '          </label>\n')
+    out += ('          <div class="ws-steppers">\n'
+            '            <span class="ws-stepper"><span class="ws-stepper-name">Groups</span>\n'
+            '              <button class="ws-rank-btn" type="button" data-ws-step="groups" '
+            'data-by="-1" aria-label="Fewer groups">&minus;</button>\n'
+            '              <output data-ws-groups-out>5</output>\n'
+            '              <button class="ws-rank-btn" type="button" data-ws-step="groups" '
+            'data-by="1" aria-label="More groups">+</button></span>\n'
+            '            <span class="ws-stepper"><span class="ws-stepper-name">Size &plusmn;</span>\n'
+            '              <button class="ws-rank-btn" type="button" data-ws-step="spread" '
+            'data-by="-1" aria-label="Stricter sizes">&minus;</button>\n'
+            '              <output data-ws-spread-out>1</output>\n'
+            '              <button class="ws-rank-btn" type="button" data-ws-step="spread" '
+            'data-by="1" aria-label="Looser sizes">+</button></span>\n'
+            '          </div>\n')
     out += '        </div>\n'
     out += '        <p class="ws-note" data-ws-note></p>\n'
 
@@ -972,10 +986,12 @@ def build_workshop():
         out += '        <p class="ws-caption">%s</p>\n' % md_inline(meta['caption'])
     out += '      </div>\n'
 
-    # aggregate category popularity — safe to publish, says nothing per person
-    if n_cats:
-        out += section_head(meta.get('categories_title', 'What the room was interested in'))
-        out += '      <ul class="ws-cats" data-ws-cats></ul>\n'
+    out += section_head(meta.get('groups_title', 'Who goes where'))
+    out += '      <div class="ws-groups" data-ws-groups></div>\n'
+
+    # aggregate project popularity — a count over everyone
+    out += section_head(meta.get('categories_title', 'How the projects were ranked'))
+    out += '      <ul class="ws-cats ws-cats--page" data-ws-cats></ul>\n'
 
     for heading, sub in sections(body):
         if heading:
@@ -985,16 +1001,16 @@ def build_workshop():
             out += '      <div class="prose reveal">%s</div>\n' % text
 
     if n_people:
-        out += ('      <p class="ws-provenance mono">%d people · %d categories · %d votes</p>\n'
+        out += ('      <p class="ws-provenance mono">%d people · %d projects · %d rankings</p>\n'
                 % (n_people, n_cats, len(data.get('votes', []))))
 
     out += '    </div>\n  </section>\n'
 
     return page('workshop.html',
-                meta.get('page_title', 'Workshop network'),
+                meta.get('page_title', 'Workshop groups'),
                 meta.get('description', ''), out,
                 '<script src="assets/js/store.js" defer></script>\n'
-                '<script src="assets/js/projection.js" defer></script>\n'
+                '<script src="assets/js/groups.js" defer></script>\n'
                 '<script src="assets/js/network.js" defer></script>\n'
                 '<script src="assets/js/workshop.js" defer></script>',
                 head_extra=workshop_api_meta())
@@ -1051,18 +1067,16 @@ def build_vote():
             '          </div>\n'
             '          <p class="ws-talk" data-ws-talk hidden></p>\n'
             '          <h1>%s</h1>\n          <p class="lede">%s</p>\n'
-            '          <div class="ws-chips" data-ws-chips></div>\n'
+            '          <h2 class="ws-label">%s</h2>\n'
+            '          <ol class="ws-ranking" data-ws-ranking aria-live="polite"></ol>\n'
             '          <p class="ws-tally" data-ws-tally></p>\n'
-            '          <form class="ws-form ws-form--row ws-addrow" data-ws-addcat-form>\n'
-            '            <input class="ws-input" type="text" data-ws-addcat-input\n'
-            '                   placeholder="%s" aria-label="%s"\n'
-            '                   autocomplete="off" spellcheck="false" required>\n'
-            '            <button class="btn" type="submit">Add</button>\n'
-            '          </form>\n        </section>\n'
-            % (e(g('ballot_title', 'What interests you?')),
+            '          <h2 class="ws-label">%s</h2>\n'
+            '          <div class="ws-projects" data-ws-projects></div>\n'
+            '        </section>\n'
+            % (e(g('ballot_title', 'Rank your projects')),
                md_inline(g('ballot_lede', '')),
-               e(g('addcat_placeholder', 'Add a topic')),
-               e(g('addcat_placeholder', 'Add a topic'))))
+               e(g('ranking_title', 'Your ranking')),
+               e(g('projects_title', 'Projects'))))
 
     out += ('        <section data-ws-screen="closed" hidden>\n'
             '          <h1>%s</h1>\n          <p class="lede">%s</p>\n'
@@ -1118,10 +1132,22 @@ def build_wsadmin():
             '                   placeholder="Current talk (shown on phones)" autocomplete="off">\n'
             '            <button class="btn" type="submit">Set</button>\n'
             '          </form>\n'
+            '          <form data-adm-groups-form class="ws-form ws-form--row ws-groupsform">\n'
+            '            <label class="ws-label" for="adm-groups">Groups</label>\n'
+            '            <input id="adm-groups" data-adm-groups-input class="ws-input ws-input--num"\n'
+            '                   type="number" min="1" max="10" step="1" inputmode="numeric" required>\n'
+            '            <label class="ws-label" for="adm-spread">Size ±</label>\n'
+            '            <input id="adm-spread" data-adm-spread-input class="ws-input ws-input--num"\n'
+            '                   type="number" min="0" max="10" step="1" inputmode="numeric" required>\n'
+            '            <button class="btn" type="submit">Set</button>\n'
+            '          </form>\n'
+            '          <p class="ws-note" style="margin:-0.8rem 0 1.4rem">What /workshop opens with: '
+            'the number of groups, and how far a group may be above or below an even split. '
+            '<a href="workshop.html" target="_blank" rel="noopener">Open the groups &#8599;</a></p>\n'
             '          <form data-adm-cat-form class="ws-form ws-form--row">\n'
             '            <input data-adm-cat-input class="ws-input" type="text"\n'
-            '                   aria-label="Add a category"\n'
-            '                   placeholder="Add a category" autocomplete="off" required>\n'
+            '                   aria-label="Add a project"\n'
+            '                   placeholder="Add a project (rarely needed)" autocomplete="off" required>\n'
             '            <button class="btn" type="submit">Add</button>\n'
             '          </form>\n'
             '          <form data-adm-person-form class="ws-form ws-form--row">\n'

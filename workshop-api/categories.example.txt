@@ -1,11 +1,13 @@
-# The predefined half of the ballot, one per line.
-# You can add more during the workshop from /wsadmin; those get flagged "live".
-Evolutionary anthropology
-Theory of mind
-Cognitive evolution
-Ape evolution
-Social networks
-Brain evolution
-Genetic connectivity
-Cumulative culture
-
+# The projects on the ballot, one per line:   short | title | description
+# Order is the order on the phones. Ids are positional (c01, c02, …), so do not
+# reorder once voting has started.
+P1 · Plant knowledge | Plant-knowledge sharing and cumulative cultural evolution | Examine how friendship, kinship and contact networks shape the transmission, recombination and innovation of medicinal plant knowledge.
+P2 · Reputation | Reputation, gossip, antagonistic ties, and cooperation | Test whether gossip over positive and antagonistic ties spreads reputations through camps and explains cooperation beyond kinship or residence.
+P3 · Mental health | Mental health, well-being, and sex differences | Investigate how egalitarian social settings and social-support networks shape mental health and well-being across life history.
+P4 · Inequality | Lifestyle transition, cultural repertoire and social inequality | Study how possessions and skills are distributed by gender, and how inequality emerges as hunter-gatherers settle into agriculture and/or get in conflict with farmers.
+P5 · Lifetime mobility | Lifetime mobility and socio-cultural patterns | Reconstruct networks from lifetime residence and visiting histories to show who moves, when and with whom, and how this shapes anthropologically interesting features.
+P6/7 · Multiplex networks | Friendship, co-location and multiplex social networks | Pair ~9 weeks of wearable proximity data with app-reported ties to study how friendships form, persist and structure daily co-location — and use information theory to test how much the kinship, friendship, contact and mobility layers overlap, and in which direction.
+P8 · Disease ecology | Mobility, social networks and disease ecology | Explore how marriage, migration and contact networks shape genetic connectivity, adaptation and infection risk, including a trade-off with cultural transmission.
+P9 · Language & stories | Language evolution and story-telling | Track how stories, songs and ritual performances are learned, transmitted and transformed across networks, generations and regions.
+P10 · Scaling laws | Scaling laws from camps to towns | Test whether contacts per person scale with settlement size, from forest camps to towns, and whether size or permanence matters.
+P11 · Interventions | Interventions and social diffusion | Seed culturally relevant health or social interventions in selected people to test whether network-based targeting outperforms random seeding.

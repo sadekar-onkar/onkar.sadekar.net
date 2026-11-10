@@ -22,8 +22,8 @@ content/
   code.md            repositories
   cv.md              CV sections
   404.md
-  workshop.md        the published workshop network (prose)
-  workshop.json      the workshop vote data — absent until a workshop happens
+  workshop.md        the published workshop groups page (prose)
+  workshop.json      the workshop ballots — `{}` until a workshop is exported
   vote.md            wording for the attendee voting screen
   wsadmin.md         wording for the workshop control screen
 files/
@@ -32,7 +32,7 @@ files/
 assets/              css, js, fonts, favicon — design, not content
 build.py             content/ + files/  ->  _site/
 workshop-api/        the Cloudflare Worker; NOT part of the site (see below)
-tests/               ./tests/run.sh — the workshop maths and rendering
+tests/               ./tests/run.sh — the workshop group solver and rendering
 _site/               build output; gitignored, never committed
 ```
 
@@ -124,9 +124,10 @@ both pages in both modes.
   CSS `:has()`, which simply does nothing in browsers that lack it.
 - **collaborators** — canvas, `data-network="collab"`. Reads the `.collab`
   entries from the page. Clicking a person fills the panel above the list.
-- **workshop** — canvas, `data-network="workshop"`. The person-person projection
-  of the workshop votes. Unlike collab it reads a JSON blob, not the DOM,
-  because the thresholding is interactive. See "The workshop" below.
+- **workshop** — canvas, `data-network="workshop"`. The workshop's discussion
+  groups: one disconnected star per group, project at the hub. Unlike collab it
+  reads a JSON blob, not the DOM, because the grouping is interactive. See
+  "The workshop" below.
 - **ambient** — `data-network="ambient"`. Currently **unused**: the home page
   switched to `particles.js` and the markup went with it, so `buildAmbient()`
   and the `.hero-bg` CSS are orphaned. `network.js` is still loaded on
@@ -145,8 +146,10 @@ one already placed is dropped.
 
 ## The workshop
 
-Three pages that let a room vote on topics during a workshop and turn the result
-into a published network. Added September 2026.
+Three pages that let a room rank projects during a workshop and split it into
+discussion groups. Added September 2026; switched from interest votes to ranked
+ballots and groups in November 2026 for the Congolese Hunter-Gatherer Social
+Network workshop (Rome, 12–15 Nov 2026).
 
 **The shape of it.** GitHub Pages serves files and executes nothing, so it
 cannot accept a vote — the same wall the private-area idea hit (see "Not
@@ -173,15 +176,39 @@ the pages then say they are not configured. Nothing else on the site is
 affected, and no other page ever gets the API `<meta>` — the
 zero-third-party-request rule still holds everywhere else.
 
-**The maths** is in `assets/js/projection.js`. A one-mode projection of a
-bipartite graph is dense and hub-driven: raw co-occurrence makes whoever ticked
-the most boxes look like the centre of the room. Two views ship behind a toggle
-— raw shared count, and Jaccard (overlap over union, the default) — each with
-its own threshold slider. Link width follows whichever measure is active
-(`0.6 + 0.35 × shared` or `0.6 + 3 × Jaccard`, capped at 3px). A statistically
-validated view (hypergeometric test + Benjamini-Hochberg) was removed in Sept
-2026 at Onkar's request, along with the prose sections that explained it; do
-not re-add either without being asked.
+**The ballot.** Each attendee ranks up to four projects (`maxRanks` in
+`worker.js`). The phone always sends the whole ranking to `POST /ballot`, which
+replaces that person's rows in one D1 batch — so the offline queue keeps only
+the latest ballot per person and replays are harmless. The projects are the
+programme's (`workshop-api/categories.txt`: `short | title | description`, P6
+and P7 merged); only the admin can add one.
+
+**The maths** is in `assets/js/groups.js`, and runs in the browser. Given K
+groups and a size tolerance s, every group holds between `floor(N/K) - s`
+(at least 1) and `ceil(N/K) + s` people. There are four solutions: solution r
+aims for each person's r-th choice, or their last if they ranked fewer — so a
+single pick never moves. **Each solution picks its own K projects.** Sharing
+one set across all four was tried first and rejected: rounds 2–4 outvoted
+round 1, and solution 1 stopped giving people their favourite. Cost of a
+placement is its distance from the target on the person's ballot (0/100/300/600,
+convex), 5000 for a project they did not rank. Each candidate project set is an
+exact assignment problem (Hungarian algorithm on people × seats; seats below the
+minimum carry a huge bonus so every group fills to its minimum, seats above an
+even split a tiny growing penalty as the tie-break); all K-subsets are tried
+with a lower-bound prune. Tests check it against exhaustive search.
+
+The admin's K and s (`/state` → `groups`, `spread`) are what `/workshop` opens
+with; its own steppers explore other values locally.
+
+**Free-tier budget.** The Worker was meant to run a week unattended. D1's free
+tier is 5M rows read a day, so: phones poll every 30 s (only a freeze or the
+talk banner can change under them), `/workshop` every 15 s and only re-solves
+when the ballots changed, and the Worker caches the roster/projects/settings
+and `/export` in-isolate for 8 s, cleared by any write.
+
+**Privacy changed with the groups.** The old projection published counts only.
+A group list necessarily says who ranked what, so the page now carries the
+ballots themselves (names re-keyed by `anonymise()` as before).
 
 Run `./tests/run.sh` after touching any of this.
 

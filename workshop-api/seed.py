@@ -5,7 +5,8 @@
     wrangler d1 execute workshop --remote --file=seed.sql
 
 roster.txt and categories.txt are one entry per line; blank lines and lines
-starting with # are ignored. **roster.txt is gitignored** — attendee names are
+starting with # are ignored. A category line is `short | title | description`
+(only the title is required; `title` alone also works). **roster.txt is gitignored** — attendee names are
 never committed. The site fetches the roster from the API at runtime instead,
 which is also what lets you add walk-ins during the workshop without a rebuild.
 
@@ -56,8 +57,15 @@ def main():
         print('INSERT OR IGNORE INTO attendee (id, name) VALUES (%s, %s);'
               % (q('p%02d' % i), q(p)))
     for i, c in enumerate(cats, 1):
-        print('INSERT OR IGNORE INTO category (id, label, added_live) VALUES (%s, %s, 0);'
-              % (q('c%02d' % i), q(c)))
+        parts = [x.strip() for x in c.split('|')]
+        if len(parts) == 1:
+            short, label, desc = parts[0], parts[0], ''
+        else:
+            short, label, desc = (parts + ['', ''])[:3]
+            label = label or short
+        print('INSERT OR IGNORE INTO category (id, label, short, description, added_live) '
+              'VALUES (%s, %s, %s, %s, 0);'
+              % (q('c%02d' % i), q(label), q(short), q(desc)))
     print('INSERT OR REPLACE INTO setting (key, value) VALUES (%s, %s);'
           % (q('workshop_name'), q(name)))
     if date:

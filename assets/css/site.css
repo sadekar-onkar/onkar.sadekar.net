@@ -1499,6 +1499,89 @@ svg.bip {
 }
 .ws-addrow .ws-input { font-size: max(0.95rem, 16px); }
 
+/* — the ranked ballot — */
+.ws h2.ws-label { margin: 0 0 0.6rem; font-weight: 500; }
+.ws-ranking { list-style: none; padding: 0; margin: 0 0 0.6rem; display: grid; gap: 0.4rem; }
+.ws-rank-empty {
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+.ws-rank-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.45rem 0.5rem 0.45rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--a1);
+  background: var(--surface);
+}
+.ws-rank-n {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--a1-ink);
+  background: var(--a1);
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+}
+.ws-rank-label { color: var(--ink); font-weight: 600; font-size: 0.95rem; overflow-wrap: anywhere; }
+.ws-rank-tools { display: flex; gap: 0.25rem; }
+.ws-rank-btn {
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.ws-rank-btn:hover:not(:disabled) { border-color: var(--a1); color: var(--a1); }
+.ws-rank-btn:disabled { opacity: 0.35; cursor: default; }
+.ws-rank-btn:focus-visible { outline: 2px solid var(--a1); outline-offset: 1px; }
+
+.ws-projects { display: grid; gap: 0.55rem; margin-bottom: 1.5rem; }
+.ws-project {
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.ws-project:hover { border-color: var(--a1); }
+.ws-project:focus-visible { outline: 2px solid var(--a1); outline-offset: 2px; }
+.ws-project[data-on='true'] { border-color: var(--a1); background: var(--glow); }
+.ws-project[data-full='true'] { opacity: 0.55; }
+.ws-project-head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.ws-project-head b { font-size: 1rem; }
+.ws-project-rank {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--a1-ink);
+  background: var(--a1);
+  border-radius: 6px;
+  padding: 0.15rem 0.45rem;
+  flex: none;
+}
+.ws-project-title { font-size: 0.88rem; color: var(--ink); }
+.ws-project-desc { font-size: 0.82rem; color: var(--ink-2); line-height: 1.45; }
+
+.ws-groupsform .ws-label { flex: none; }
+.ws-form--row .ws-input--num { flex: 0 0 5rem; width: 5rem; }
+
 /* — admin extras — */
 .ws-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 1.5rem 0 1rem; }
 .ws-qr { font-size: 0.8rem; color: var(--ink-2); margin: 0 0 1.2rem; word-break: break-all; }
@@ -1550,6 +1633,55 @@ svg.bip {
   min-width: 3.2rem;
   text-align: right;
 }
+.ws-steppers { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+.ws-stepper { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--ink-2); }
+.ws-stepper-name { margin-right: 0.2rem; }
+.ws-stepper .ws-rank-btn { min-width: 2.1rem; min-height: 2.1rem; }
+.ws-stepper output {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--ink);
+  min-width: 1.6rem;
+  text-align: center;
+}
+
+/* — who goes where: one card per group, coloured like its star — */
+.ws-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.9rem;
+  margin-bottom: clamp(2.5rem, 6vw, 3.5rem);
+}
+.ws-group {
+  --tone: var(--a1);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--tone);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 0.9rem 1rem 0.8rem;
+}
+.ws-group[data-tone='1'] { --tone: var(--a2); }
+.ws-group[data-tone='2'] { --tone: var(--a3); }
+.ws-group[data-tone='3'] { --tone: var(--ink-2); }
+.ws-group[data-tone='4'] { --tone: var(--a4); }
+.ws-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
+.ws-group-name { font-size: 1rem; margin: 0; }
+.ws-group-n { font-size: 0.75rem; color: var(--ink-2); flex: none; }
+.ws-group-title { font-size: 0.8rem; color: var(--ink-2); margin: 0.25rem 0 0.6rem; line-height: 1.4; }
+.ws-group-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.15rem; }
+.ws-member {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.ws-member:last-child { border-bottom: 0; }
+.ws-member-name { color: var(--ink); overflow-wrap: anywhere; }
+.ws-member-rank { font-size: 0.72rem; color: var(--ink-2); flex: none; }
+.ws-member[data-rank='1'] .ws-member-rank { color: var(--ink); font-weight: 600; }
+.ws-member[data-rank='0'] .ws-member-rank { color: var(--a2); }
+
 .ws-note {
   font-size: 0.82rem;
   color: var(--ink-2);
@@ -1602,14 +1734,18 @@ svg.bip {
   position: relative;
   overflow: hidden;
 }
+.ws-cats--page { margin-bottom: clamp(2.5rem, 6vw, 3.5rem); }
+
+/* Two layers: all mentions (light) under first choices (solid). */
+.ws-cat-bar::before,
 .ws-cat-bar::after {
   content: '';
   position: absolute;
   inset: 0 auto 0 0;
-  width: var(--pct, 0%);
-  background: var(--a1);
   border-radius: inherit;
 }
+.ws-cat-bar::before { width: var(--pct, 0%); background: color-mix(in srgb, var(--a1) 35%, transparent); }
+.ws-cat-bar::after { width: var(--pct1, var(--pct, 0%)); background: var(--a1); }
 .ws-cat-n {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.78rem;
@@ -1624,7 +1760,7 @@ svg.bip {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ws-chip, .ws-person, .ws-method { transition: none; }
+  .ws-chip, .ws-person, .ws-method, .ws-project { transition: none; }
 }
 
 @media print {

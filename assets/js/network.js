@@ -4,9 +4,9 @@
 
      collab      collaborators.html — co-authors around a hub. Clicking a
                  person filters the list below to the papers you share.
-     workshop    workshop.html — the person-person projection of the workshop
-                 votes. Reads a JSON blob (see projection.js) rather than the
-                 DOM, because its thresholding is interactive.
+     workshop    workshop.html — the workshop's discussion groups: one star per
+                 group, project at the hub. Reads a JSON blob (see groups.js)
+                 rather than the DOM, because the grouping is interactive.
      ambient     a quiet graph drifting behind a hero. Purely decorative, no
                  labels, no interaction. Currently unused: the home page uses
                  particles.js instead.
@@ -176,18 +176,20 @@
 
   /* ------------------------------------------------------------- workshop -- */
 
-  /* The workshop projection: people linked by shared interests. Unlike collab,
-     the data is not in the DOM as markup — it is a JSON blob emitted by
-     build.py (or polled live from the API while voting is open, via
-     figure.netData), because the thresholding is interactive and needs the raw
-     incidence data, not a rendered picture of one particular threshold.
+  /* The workshop groups: one star per group, the project at the hub and its
+     people around it, each component on its own patch of the canvas. The data
+     is a JSON blob emitted by build.py (or polled live from the API while
+     voting is open, via figure.netData); groups.js does all the solving.
 
-     projection.js does all the maths. This only turns its output into nodes
-     and links. Nothing here ever learns WHICH categories a pair shares — the
-     tooltip gets a count, by design. */
+     Node objects are kept by id across rebuilds, so changing the number of
+     groups or the solution moves people to their new group instead of
+     throwing the picture away. A node that is new to the picture is created
+     with fractional fx/fy and placed by the runtime once it knows the size. */
+  var ORD = ['', '1st', '2nd', '3rd', '4th'];
+
   function buildWorkshop(figure) {
-    var P = window.WorkshopProjection;
-    if (!P) return null;
+    var WG = window.WorkshopGroups;
+    if (!WG) return null;
 
     var holder = document.getElementById(figure.dataset.netData || 'workshop-data');
     if (!holder) return null;
@@ -196,69 +198,124 @@
     try { data = JSON.parse(holder.textContent || '{}'); } catch (e) { return null; }
     if (!data || !data.people || !data.people.length) return null;
 
-    var opts = { method: 'jaccard', threshold: 0.4 };
-    var first = P.build(data, opts);
+    var model = WG.prepare(data);
+    var canvas = figure.querySelector('canvas');
+    var opts = {
+      groups: +data.groups || 5,
+      spread: data.spread === undefined ? 1 : +data.spread,
+      round: 1
+    };
+    var pool = {};                         // key -> node object, kept forever
+
+    /* K anchors on a grid shaped like the canvas, as fractions of it. */
+    function anchors(K) {
+      var r = canvas ? canvas.getBoundingClientRect() : { width: 900, height: 560 };
+      var aspect = (r.width && r.height) ? r.width / r.height : 1.6;
+      var cols = Math.max(1, Math.min(K, Math.round(Math.sqrt(K * aspect))));
+      var rows = Math.ceil(K / cols);
+      var out = [];
+      for (var g = 0; g < K; g++) {
+        var row = Math.floor(g / cols);
+        var inRow = row === rows - 1 ? K - row * cols : cols;   // centre a short last row
+        var col = g - row * cols;
+        out.push({ x: (col + 0.5) / inRow, y: (row + 0.5) / rows });
+      }
+      return { list: out, cols: cols, rows: rows };
+    }
+
+    function node(key, make) {
+      if (!pool[key]) { pool[key] = make(); pool[key].fresh = true; }
+      return pool[key];
+    }
 
     var G = {
-      nodes: first.nodes,
+      nodes: [],
       links: [],
       selectable: true,
-      labelKinds: ['person'],
-      data: data,
-      stats: first.stats,
-      categories: first.categories
+      labelKinds: ['concept', 'person'],
+      groupPull: 0.006,
+      data: data
     };
 
-    /* Re-thresholding must not relayout. The node objects are kept and only
-       their links, community and colour are replaced, so dragging the slider
-       morphs the picture the reader is already looking at instead of throwing
-       it away and starting a new simulation from a fresh random ring. */
     G.rebuild = function (next) {
       if (next) {
-        if (next.method) opts.method = next.method;
-        if (next.threshold !== undefined) opts.threshold = next.threshold;
+        if (next.groups !== undefined) opts.groups = next.groups;
+        if (next.spread !== undefined) opts.spread = next.spread;
+        if (next.round !== undefined) opts.round = next.round;
       }
-      var res = P.build(data, opts);
-      res.nodes.forEach(function (n, i) {
-        var live = G.nodes[i];
-        live.community = n.community;
-        live.tone = n.tone;
-        live.links = n.links;
+      var res = WG.view(model, opts);
+      res.opts = { groups: opts.groups, spread: opts.spread, round: opts.round };
+
+      var people = [], hubs = [], links = [];
+      if (res.ok) {
+        var A = anchors(res.groups.length);
+        /* Spacing follows the grid cell, so ten groups pack as neatly as two. */
+        var r0 = canvas ? canvas.getBoundingClientRect() : { width: 900, height: 560 };
+        var cell = Math.min((r0.width || 900) / A.cols, (r0.height || 560) / A.rows);
+        G.scale = Math.max(0.55, Math.min(1.3, cell / 230));
+
+        res.groups.forEach(function (g, gi) {
+          var at = A.list[gi];
+          var hub = node('c:' + g.project.id, function () {
+            return { kind: 'concept', hub: true, r: 12, vx: 0, vy: 0, fx: at.x, fy: at.y };
+          });
+          hub.id = 'c:' + g.project.id;
+          hub.label = g.project.short;
+          hub.sub = g.members.length + (g.members.length === 1 ? ' person · ' : ' people · ') +
+                    g.project.label;
+          hub.hx = at.x; hub.hy = at.y;
+          hub.tone = gi % 5;
+          hubs.push(hub);
+
+          g.members.forEach(function (m, mi) {
+            var ang = mi / Math.max(g.members.length, 1) * 6.283;
+            var pn = node('p:' + m.id, function () {
+              return { kind: 'person', r: 6, vx: 0, vy: 0,
+                       fx: at.x + Math.cos(ang) * 0.05, fy: at.y + Math.sin(ang) * 0.07 };
+            });
+            pn.id = m.id;
+            pn.label = m.label;
+            pn.anon = m.anon;
+            pn.ax = at.x; pn.ay = at.y;
+            pn.tone = gi % 5;
+            pn.sub = m.rank ? g.project.short + ' · their ' + ORD[m.rank] + ' choice'
+                            : g.project.short + ' · not on their list';
+            pn.r = m.rank === 1 ? 7 : 6;
+            people.push({ node: pn, hub: hub, rank: m.rank });
+          });
+        });
+      }
+
+      /* People first, then hubs: the runtime treats nodes[0].hub as the centre
+         of the collaborator graph, which a group hub is not. */
+      G.nodes = people.map(function (x) { return x.node; }).concat(hubs);
+      var hubIndex = {};
+      hubs.forEach(function (h, i) { hubIndex[h.id] = people.length + i; });
+      people.forEach(function (x, i) {
+        /* Link width says how happy the placement is: thick for a 1st choice,
+           a faint hairline for a project they did not rank. */
+        var w = [0.7, 2.6, 1.9, 1.35, 1.0][x.rank];
+        links.push({
+          a: i, b: hubIndex[x.hub.id], w: w, len: 58, k: 0.9,
+          faint: !x.rank,
+          tip: { label: x.node.label + '  →  ' + x.hub.label,
+                 sub: x.rank ? ORD[x.rank] + ' choice' : 'not on their list' }
+        });
       });
-      G.links = res.links.map(function (l) {
-        var a = G.nodes[l.a].label, b = G.nodes[l.b].label;
-        return {
-          a: l.a, b: l.b,
-          w: l.w,
-          len: 96,
-          k: 0.55,
-          shared: l.shared,
-          tip: {
-            label: a + '  &  ' + b,
-            sub: l.shared + (l.shared === 1 ? ' shared category' : ' shared categories')
-          }
-        };
-      });
-      G.stats = res.stats;
-      G.categories = res.categories;
+      G.links = links;
+      G.result = res;
       return res;
     };
 
-    /* Live re-poll (workshop.html while voting is open). Swap in a whole fresh
-       payload — new voters, new topics, new votes — and hand back a fresh node
-       list. Positions are NOT assigned here: the caller reconciles them against
-       the previous graph so the picture grows in place instead of jumping. */
+    /* Live re-poll (workshop.html while voting is open): new voters, new
+       ballots. Kept nodes keep their place; the caller rebuilds. */
     G.setData = function (nextData) {
       data = nextData;
-      var res = P.build(data, opts);
-      G.nodes = res.nodes;
-      G.stats = res.stats;
-      G.categories = res.categories;
       G.data = data;
-      return res;
+      model = WG.prepare(data);
     };
 
-    G.rebuild(opts);
+    G.rebuild();
     return G;
   }
 
@@ -299,13 +356,33 @@
       G = MODES[mode] ? MODES[mode](figure) : null;
       if (!G) { figure.hidden = true; return false; }
       var sx = W * 0.40, sy = H * 0.40;
-      G.nodes.forEach(function (n) { n.x = W / 2 + n.x * sx; n.y = H / 2 + n.y * sy; });
-      if (G.nodes[0] && G.nodes[0].hub) { G.nodes[0].x = W / 2; G.nodes[0].y = H / 2; }
-      var spacing = Math.min(Math.sqrt(W * H / G.nodes.length), H / 3.2);
-      G.scale = Math.max(0.7, Math.min(2.0, spacing / 62));
+      G.nodes.forEach(function (n) {
+        if (n.fresh) return;
+        n.x = W / 2 + n.x * sx; n.y = H / 2 + n.y * sy;
+      });
+      placeFresh();
+      if (G.nodes[0] && G.nodes[0].hub && G.nodes[0].hx === undefined) {
+        G.nodes[0].x = W / 2; G.nodes[0].y = H / 2;
+      }
+      if (!G.scale) {
+        var spacing = Math.min(Math.sqrt(W * H / Math.max(G.nodes.length, 1)), H / 3.2);
+        G.scale = Math.max(0.7, Math.min(2.0, spacing / 62));
+      }
       if (captionEl && G.caption) captionEl.innerHTML = G.caption;
       ticks = 0;
       return true;
+    }
+
+    /* Nodes a builder created after the first layout carry fractional fx/fy
+       instead of pixels; give them real coordinates now that W and H exist. */
+    function placeFresh() {
+      if (!G) return;
+      G.nodes.forEach(function (n) {
+        if (!n.fresh) return;
+        n.x = n.fx * W; n.y = n.fy * H;
+        n.vx = 0; n.vy = 0;
+        delete n.fresh;
+      });
     }
 
     /* --- physics --- */
@@ -346,6 +423,11 @@
         if (n.hx !== undefined) {
           n.vx += (n.hx * W - n.x) * 0.011;
           n.vy += (n.hy * H - n.y) * 0.011;
+        } else if (n.ax !== undefined) {
+          // a group member: drawn to its own group's patch, not the centre
+          var pull = G.groupPull || 0.004;
+          n.vx += (n.ax * W - n.x) * pull;
+          n.vy += (n.ay * H - n.y) * pull;
         } else {
           n.vx += (W / 2 - n.x) * 0.0011;
           n.vy += (H / 2 - n.y) * 0.0020;
@@ -724,6 +806,7 @@
     figure.netUpdate = function (opts) {
       if (!G || !G.rebuild) return null;
       var res = G.rebuild(opts);
+      placeFresh();
       hovered = selected = hoverEdge = null;
       showTip(null);
       ticks = 0;
@@ -732,27 +815,16 @@
     };
 
     /* Feed in a fresh /export payload from a live poll without discarding the
-       layout. Nodes that persist (same id) keep their exact position and
-       velocity; a genuinely new person drops in near the centre and springs
-       outward as the sim relaxes. Returns the same shape as netUpdate, or null
-       if there is nothing to update or a drag is in progress (skip this tick,
-       the next poll will carry the same data). */
+       layout. The builder keeps node objects by id, so people already on screen
+       stay exactly where they are; a new voter appears at their group's patch
+       and settles in. Returns the same shape as netUpdate, or null if there is
+       nothing to update or a drag is in progress (skip this tick, the next
+       poll will carry the same data). */
     figure.netData = function (payload) {
       if (!G || !G.setData || dragging) return null;
-      var prev = {};
-      G.nodes.forEach(function (n) { prev[n.id] = n; });
       G.setData(payload);
-      G.nodes.forEach(function (n) {
-        var old = prev[n.id];
-        if (old) {
-          n.x = old.x; n.y = old.y; n.vx = old.vx; n.vy = old.vy;
-        } else {
-          n.x = W / 2 + (Math.random() - 0.5) * 60;
-          n.y = H / 2 + (Math.random() - 0.5) * 60;
-          n.vx = 0; n.vy = 0;
-        }
-      });
       var res = G.rebuild();
+      placeFresh();
       hovered = selected = hoverEdge = null;
       showTip(null);
       ticks = 0;

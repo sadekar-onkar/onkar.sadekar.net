@@ -57,9 +57,12 @@ DEFAULT_SITE = 'https://onkar.sadekar.net'
 
 # Easy to read aloud and to type: no 0/O or 1/I/L.
 CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+# Tables are DROPPED, not just emptied, so a column added to schema.sql reaches
+# an existing database (the Sept 2026 ranked-ballot change added three).
 # `setting` goes too, so a frozen state or an old current-talk banner does not
 # survive into the new workshop; schema.sql puts the defaults back.
-WIPE_SQL = 'DELETE FROM vote; DELETE FROM attendee; DELETE FROM category; DELETE FROM setting;'
+WIPE_SQL = ('DROP TABLE IF EXISTS vote; DROP TABLE IF EXISTS attendee; '
+            'DROP TABLE IF EXISTS category; DROP TABLE IF EXISTS setting;')
 
 
 # ------------------------------------------------------------------ output --
@@ -513,7 +516,8 @@ def main():
     p.add_argument('--categories', default=os.path.join(HERE, 'categories.txt'),
                    help='one starting topic per line (default: categories.txt)')
     p.add_argument('--keep', action='store_true',
-                   help='same workshop: do not wipe, and offer the saved codes as defaults')
+                   help='same workshop: do not wipe, and offer the saved codes as defaults '
+                        '(only for a database already on the current schema)')
     p.add_argument('-y', '--yes', action='store_true', help='wipe the old data without asking')
     p.add_argument('--no-publish', action='store_true',
                    help='do not touch content/, commit or push')

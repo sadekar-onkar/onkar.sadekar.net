@@ -7,10 +7,11 @@
  * Plain fetch, no SDK, no CDN script — the site's zero-third-party-request rule
  * survives, and the published network never loads this file at all.
  *
- * The offline queue is the part that matters on conference wifi. A vote is an
- * upsert keyed on (person, category), so replaying a queued write can never
- * double-count; and because only the LAST state of each pair is kept, toggling
- * a chip on-off-on while offline sends one request, not three.
+ * The offline queue is the part that matters on conference wifi. A ballot is
+ * sent whole — the complete ranking — and the server replaces that person's
+ * rows with it, so replaying a queued write can never double-count; and
+ * because only the LAST ballot per person is kept, reordering five times while
+ * offline sends one request, not five.
  *
  * Publishes window.WorkshopStore.
  */
@@ -21,7 +22,7 @@
   var K = {
     join: 'ws-join-v1',
     person: 'ws-person-v1',
-    queue: 'ws-queue-v1',
+    queue: 'ws-queue-v2',   // v1 held per-topic toggles; not replayable now
     admin: 'ws-admin-v1'   // sessionStorage only, never localStorage
   };
 
@@ -110,11 +111,11 @@
   }
   function writeQueue(q) { lsSet(K.queue, JSON.stringify(q)); }
 
-  /* Last write wins per (person, category) — see the header note. Every entry
-     carries a unique seq so the flush loop can remove exactly the row it sent:
-     if the user re-toggles the same chip while its write is in flight, the
-     replacement gets a new seq and survives, and the stale one is dropped
-     without ever removing the wrong entry or spinning on it.
+  /* Last write wins per person — see the header note. Every entry carries a
+     unique seq so the flush loop can remove exactly the row it sent: if the
+     ballot changes again while its write is in flight, the replacement gets a
+     new seq and survives, and the stale one is dropped without ever removing
+     the wrong entry or spinning on it.
 
      Seeded from whatever survived in storage, because a reload must not restart
      the counter at 0 and start colliding with entries queued before it. */
@@ -122,7 +123,7 @@
 
   function enqueue(item) {
     var q = readQueue().filter(function (x) {
-      return !(x.personId === item.personId && x.categoryId === item.categoryId);
+      return x.personId !== item.personId;
     });
     item.seq = ++seq;
     q.push(item);
@@ -150,8 +151,8 @@
       var pending = readQueue();
       if (!pending.length) return Promise.resolve();
       var item = pending[0];
-      return request('POST', '/vote', {
-        personId: item.personId, categoryId: item.categoryId, on: item.on
+      return request('POST', '/ballot', {
+        personId: item.personId, ranking: item.ranking
       }).then(function () {
         drop(item.seq);
         sent++;
@@ -194,13 +195,13 @@
     person: person,
     pending: function () { return readQueue().length; },
 
-    /* What this phone has written but not yet delivered, as
-       {categoryId: on}. The ballot needs it to avoid letting a /bootstrap
-       response overwrite newer local choices. Exposed so callers never have to
+    /* The ballot this phone has written for the current person but not yet
+       delivered, or null. The ballot screen needs it so a /bootstrap response
+       never overwrites a newer local ranking. Exposed so callers never have to
        know the storage key. */
     queued: function () {
-      var out = {};
-      readQueue().forEach(function (q) { out[q.categoryId] = q.on; });
+      var p = person(), out = null;
+      readQueue().forEach(function (q) { if (q.personId === p) out = q.ranking.slice(); });
       return out;
     },
 
@@ -225,19 +226,21 @@
     },
 
     /* Optimistic: queue first, flush immediately. The caller updates the UI
-       without waiting, and the queue guarantees the write eventually lands. */
-    vote: function (categoryId, on) {
+       without waiting, and the queue guarantees the write eventually lands.
+       `ranking` is the whole ballot: category ids, favourite first. */
+    ballot: function (ranking) {
       var p = person();
       if (!p) return Promise.reject(new Error('no person selected'));
-      enqueue({ personId: p, categoryId: categoryId, on: !!on });
+      enqueue({ personId: p, ranking: ranking.slice() });
       return flush();
     },
 
     flush: flush,
 
-    /* --- self-service: a topic or a walk-in name, on the join code alone --- */
-    addCategory: function (label) { return request('POST', '/category', { label: label }); },
+    /* --- self-service: a walk-in name, on the join code alone --- */
     addAttendee: function (name) { return request('POST', '/attendee', { name: name }); },
+    /* admin only, server-side */
+    addCategory: function (label) { return request('POST', '/category', { label: label }); },
 
     /* --- admin --- */
     setAdmin: function (token) {

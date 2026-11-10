@@ -1,10 +1,10 @@
 /* Headless smoke test of the workshop rendering path.
  *
- * Runs projection.js + network.js under jsc against a fake DOM that is just
- * rich enough for init() to build the graph, run the physics and draw a frame.
- * It cannot tell us the picture looks good, but it does prove the workshop
- * mode runs without throwing, that netUpdate re-thresholds in place, and that
- * node positions survive a rebuild — none of which I can check by reading.
+ * Runs groups.js + network.js under jsc against a fake DOM that is just rich
+ * enough for init() to build the graph, run the physics and draw a frame. It
+ * cannot tell us the picture looks good, but it does prove the workshop mode
+ * runs without throwing, that netUpdate regroups in place, and that the nodes
+ * land somewhere sensible — none of which can be checked by reading.
  */
 
 var fails = 0;
@@ -96,8 +96,19 @@ function requestAnimationFrame() { return 1; }
 
 /* ------------------------------------------------------------------ run -- */
 
-load('assets/js/projection.js');
+load('assets/js/groups.js');
 load('assets/js/network.js');
+
+function spread(list) {
+  var xs = {}, n = 0;
+  list.forEach(function (a) { var k = Math.round(a.x / 10); if (!xs[k]) { xs[k] = 1; n++; } });
+  return n;
+}
+function finite(list) {
+  return list.length > 0 && list.every(function (a) {
+    return isFinite(a.x) && isFinite(a.y) && isFinite(a.r) && a.r > 0;
+  });
+}
 
 ok('scripts loaded and registered a DOMContentLoaded handler', !!document._ready);
 document._ready();
@@ -107,54 +118,56 @@ ok('netUpdate + netReload were published',
    typeof figure.netUpdate === 'function' && typeof figure.netReload === 'function');
 ok('a frame was actually drawn', drawCalls > 0, 'clearRect calls=' + drawCalls);
 
-/* --- re-thresholding --- */
-var jac = figure.netUpdate({ method: 'jaccard', threshold: 0.4 });
-ok('jaccard build returns stats', jac && jac.stats && jac.stats.people === 34,
-   jac ? 'people=' + jac.stats.people : 'null');
+/* --- solutions and group counts --- */
+var r1 = figure.netUpdate({ groups: 5, spread: 1, round: 1 });
+ok('5 groups for 34 people', r1 && r1.ok && r1.groups.length === 5,
+   r1 ? (r1.reason || 'groups=' + r1.groups.length) : 'null');
+ok('34 people + 5 project hubs are painted', arcs.length >= 39, 'arcs=' + arcs.length);
+ok('every person is linked to exactly one hub (disconnected stars)', (function () {
+  // links are person -> hub; count per person
+  return r1.stats.people === 34 &&
+    r1.groups.reduce(function (a, g) { return a + g.members.length; }, 0) === 34;
+})());
+ok('group sizes respect the tolerance',
+   r1.stats.minSize >= r1.stats.lo && r1.stats.maxSize <= r1.stats.hi,
+   r1.stats.minSize + '-' + r1.stats.maxSize + ' in ' + r1.stats.lo + '-' + r1.stats.hi);
 
-var before = jac.nodes.map(function (n) { return n.x + ',' + n.y; });
+var before = {};
+arcs.forEach(function (a, i) { before[i] = a.x + ',' + a.y; });
 
-var strict = figure.netUpdate({ method: 'jaccard', threshold: 0.9 });
-ok('raising the threshold removes links',
-   strict.stats.edges < jac.stats.edges,
-   jac.stats.edges + ' -> ' + strict.stats.edges);
-
-var loose = figure.netUpdate({ method: 'count', threshold: 1 });
-ok('loosening it adds them back', loose.stats.edges > strict.stats.edges,
-   strict.stats.edges + ' -> ' + loose.stats.edges);
+var r3 = figure.netUpdate({ groups: 5, spread: 1, round: 3 });
+ok('switching to solution 3 works', r3 && r3.ok && r3.round === 3);
+var k8 = figure.netUpdate({ groups: 8, spread: 1, round: 1 });
+ok('raising K to 8 gives 8 groups', k8.ok && k8.groups.length === 8);
+var k2 = figure.netUpdate({ groups: 2, spread: 0, round: 1 });
+ok('K = 2, spread 0: two groups of 17', k2.ok && k2.groups.every(function (g) {
+  return g.members.length === 17;
+}), k2.groups.map(function (g) { return g.members.length; }).join());
+var k11 = figure.netUpdate({ groups: 11, spread: 1, round: 1 });
+ok('more groups than projects is refused with a reason, not a crash',
+   !k11.ok && /only 10 projects/i.test(k11.reason));
 
 /* --- what actually gets painted --- */
-figure.netUpdate({ method: 'jaccard', threshold: 0.4 });
-ok('every painted coordinate is finite (no NaN from degenerate forces)',
-   arcs.length > 0 && arcs.every(function (a) {
-     return isFinite(a.x) && isFinite(a.y) && isFinite(a.r) && a.r > 0;
-   }), 'arcs=' + arcs.length);
-ok('painted nodes are spread across the canvas, not stacked',
-   (function () {
-     var xs = {}, n = 0;
-     arcs.forEach(function (a) { var k = Math.round(a.x / 10); if (!xs[k]) { xs[k] = 1; n++; } });
-     return n > 5;
-   })(), 'distinct x buckets');
-ok('painted nodes stay inside a sane region', arcs.every(function (a) {
-  return a.x > -400 && a.x < 1300 && a.y > -400 && a.y < 960;
+figure.netUpdate({ groups: 5, spread: 1, round: 1 });
+ok('every painted coordinate is finite (no NaN from degenerate forces)', finite(arcs),
+   'arcs=' + arcs.length);
+ok('painted nodes are spread across the canvas, not stacked', spread(arcs) > 10,
+   'distinct x buckets=' + spread(arcs));
+ok('painted nodes stay inside the canvas region', arcs.every(function (a) {
+  return a.x > -50 && a.x < 950 && a.y > -50 && a.y < 610;
 }));
 
-/* --- the live re-poll path: workshop.html re-fetches /export every few
-       seconds while voting is open and feeds it back in without relaying out -- */
+/* --- the live re-poll path --- */
 ok('netData is published', typeof figure.netData === 'function');
-figure.netUpdate({ method: 'jaccard', threshold: 0.4 });
-var live = figure.netData(JSON.parse(dataEl.textContent));
-ok('netData returns fresh stats for the new payload',
-   live && live.stats && live.stats.people === 34,
-   live ? 'people=' + (live.stats && live.stats.people) : 'null');
-figure.netUpdate({ method: 'jaccard', threshold: 0.4 });
-ok('after a re-poll the graph still paints finite, spread-out nodes', (function () {
-  if (!arcs.length) return false;
-  if (!arcs.every(function (a) { return isFinite(a.x) && isFinite(a.y) && a.r > 0; })) return false;
-  var xs = {}, n = 0;
-  arcs.forEach(function (a) { var k = Math.round(a.x / 10); if (!xs[k]) { xs[k] = 1; n++; } });
-  return n > 5;
-})(), 'arcs=' + arcs.length);
+var payload = JSON.parse(dataEl.textContent);
+payload.people.push({ id: 'p99', name: 'Late Arrival', consent: true });
+payload.votes.push(['p99', 'c01', 1]);
+var live = figure.netData(payload);
+ok('netData takes a new voter', live && live.ok && live.stats.people === 35,
+   live ? 'people=' + live.stats.people : 'null');
+figure.netUpdate({ groups: 5, spread: 1, round: 1 });
+ok('after a re-poll the graph still paints finite, spread-out nodes',
+   finite(arcs) && spread(arcs) > 10, 'arcs=' + arcs.length);
 
 /* --- the hidden-figure path (a figure that gets its size late) --- */
 var zeroFig = new El('figure');
@@ -176,37 +189,28 @@ ok('a zero-sized figure does not build a degenerate layout',
 zeroSize = false;
 var revived = zeroFig.netReload();
 ok('netReload revives it once it has a size', revived === true);
-zeroFig.netUpdate({ method: 'jaccard', threshold: 0.4 });
-ok('revived figure paints finite, spread-out nodes', (function () {
-  if (!arcs.length) return false;
-  if (!arcs.every(function (a) { return isFinite(a.x) && isFinite(a.y); })) return false;
-  var xs = {}, n = 0;
-  arcs.forEach(function (a) { var k = Math.round(a.x / 10); if (!xs[k]) { xs[k] = 1; n++; } });
-  return n > 5;
-})(), 'arcs=' + arcs.length);
+zeroFig.netUpdate({ groups: 5, spread: 1, round: 2 });
+ok('revived figure paints finite, spread-out nodes', finite(arcs) && spread(arcs) > 10,
+   'arcs=' + arcs.length);
 
-/* --- category rollup --- */
-ok('category counts come back', jac.categories && jac.categories.length === 13,
-   jac.categories ? 'n=' + jac.categories.length : 'missing');
-ok('category counts are positive and plausible',
-   jac.categories.every(function (c) { return c.count >= 0 && c.count <= 34; }));
-ok('the two live categories are flagged',
-   jac.categories.filter(function (c) { return c.live; }).length === 3,
-   'live=' + jac.categories.filter(function (c) { return c.live; }).length);
+/* --- project rollup --- */
+ok('all 10 projects come back with counts', r1.categories.length === 10);
+ok('first-choice counts sum to the number of voters',
+   r1.categories.reduce(function (a, c) { return a + c.first; }, 0) === 34);
 
-/* --- privacy invariants on the real fixture --- */
-ok('anonymised people carry no name',
-   jac.nodes.filter(function (n) { return n.anon; })
-            .every(function (n) { return /^Anonymous \d+$/.test(n.label); }));
-ok('8 people are anonymous in the published data',
-   jac.nodes.filter(function (n) { return n.anon; }).length === 8,
-   'got ' + jac.nodes.filter(function (n) { return n.anon; }).length);
+/* --- consent invariant on the fixture --- */
+var all = [];
+r1.groups.forEach(function (g) { all = all.concat(g.members); });
+ok('people with consent:false appear as Anonymous N, never by name',
+   all.filter(function (m) { return m.anon; }).length === 4 &&
+   all.filter(function (m) { return m.anon; }).every(function (m) {
+     return /^Anonymous \d+$/.test(m.label);
+   }));
 
 print('');
-print('edges by method:  count>=1 ' + loose.stats.edges +
-      '   jaccard>=0.4 ' + jac.stats.edges +
-      '   jaccard>=0.9 ' + strict.stats.edges +
-      '   (of ' + jac.stats.possible + ' possible pairs)');
-print('communities:      ' + jac.stats.communities + ' at jaccard 0.4');
+print('solution 1, 5 groups: ' + r1.stats.onTarget + '/34 got their 1st choice, ' +
+      r1.stats.unranked + ' unranked, sizes ' + r1.stats.minSize + '-' + r1.stats.maxSize);
+print('solution 3, 5 groups: ' + r3.stats.onTarget + '/34 on target, ' + r3.stats.moved +
+      ' moved since solution 2');
 print('');
 print(fails ? fails + ' FAILURE(S)' : 'all render tests passed');

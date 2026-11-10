@@ -27,12 +27,13 @@ run() {
 }
 
 # 1. every browser script must at least parse
-run "parse" tests/parse.test.js "assets/js/projection.js assets/js/network.js \
+run "parse" tests/parse.test.js "assets/js/groups.js assets/js/network.js \
 assets/js/store.js assets/js/vote.js assets/js/wsadmin.js assets/js/workshop.js \
 assets/js/site.js assets/js/particles.js"
 
-# 2. the projection maths, on a planted two-cluster dataset
-run "projection" tests/projection.test.js
+# 2. the group-assignment maths: exactness against brute force, balance,
+#    the four solutions, single-choice voters staying put
+run "groups" tests/groups.test.js
 
 # 3. the rendering path, headless
 run "render" tests/render.test.js

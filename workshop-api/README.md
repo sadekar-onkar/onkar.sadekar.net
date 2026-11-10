@@ -1,7 +1,7 @@
 # workshop-api
 
 The one external service. A Cloudflare Worker over a D1 database that collects
-workshop votes for a day and is then deleted.
+ranked workshop ballots for a few days and is then deleted.
 
 The site itself stays a static host: GitHub Pages serves files and executes
 nothing, so it cannot accept a vote. This is the smallest thing that can.
@@ -24,8 +24,9 @@ network in the browser.
 ./new_workshop.py --keep     # redeploy the same workshop without wiping it
 ```
 
-It **deletes the previous workshop's votes, names and topics**, asking first
-if there are any. The QR code points at `/vote#code=<room code>`, so nobody
+It **deletes the previous workshop's votes, names and topics** (it drops and
+recreates the tables, so schema changes land too), asking first if there are
+any; `--yes` skips the question. The QR code points at `/vote#code=<room code>`, so nobody
 types the code: `store.js` reads it from the URL fragment, which never reaches
 a server. The codes are saved to `.session.json` (gitignored, mode 600).
 
@@ -91,13 +92,12 @@ so nothing is added to the build dependencies.
 
 1. Open `/wsadmin` on your laptop. Enter the room code and the admin token.
 2. Put the QR code and the room code on a slide.
-3. After each talk, optionally set **Current talk** — it shows as a banner on
-   every phone. Topics can be added from any phone or from `/wsadmin`, and
-   appear everywhere within ten seconds; so can walk-in names.
-4. Watch **n of N have voted**. Below roughly 15 voters the projection is noise,
-   so this number matters more than any of the maths.
-5. `/workshop` renders live for anyone with the room code and re-polls every few
-   seconds, so you can put it on a screen and watch the network build up.
+3. Attendees rank up to four projects; walk-ins can add their own name. Set
+   **Groups** and **Size ±** in `/wsadmin` — that is what `/workshop` opens with.
+4. Watch **n of N have voted**, and the bars: `first · total` per project.
+5. `/workshop` renders live for anyone with the room code and re-polls every
+   15 s. Flip between solutions 1–4 and try other group counts there; that is
+   local to your tab and changes nothing for anyone else.
 6. At the end, **Freeze and publish**. Phones stop accepting votes and
    `/workshop` goes world-public immediately by fetching `/export`.
 7. Click **Download workshop.json**, save it as `content/workshop.json`,
@@ -110,24 +110,25 @@ so nothing is added to the build dependencies.
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/bootstrap?person=<id>` | join code | roster, ballot, this person's votes, state. Counts too, if the admin token is present |
-| POST | `/vote` | join code | upsert or delete one (person, category) pair |
-| POST | `/category` | join code | add a topic mid-workshop (deduped) |
+| POST | `/ballot` | join code | replace one person's whole ranking: `{personId, ranking: [ids…]}`, ≤ 4 |
 | POST | `/attendee` | join code | add a walk-in name (deduped) |
-| POST | `/state` | admin | set the current talk, or freeze |
+| POST | `/category` | admin | add a project (deduped) |
+| POST | `/state` | admin | set the current talk, `groups`, `spread`, or freeze |
 | GET | `/export` | public **once frozen**, else join code | the JSON `build.py` reads; `/workshop` polls it to render live |
 
 ## Security model
 
 - The **join code is public by nature** — every attendee types it, and it will
   end up in a photo of a slide. So it authorises nothing destructive: reading
-  the roster, upserting votes under a person id, and adding a topic or a walk-in
-  name (both deduped). The worst a leaked code buys someone is noise, not damage.
+  the roster, replacing a ballot under a person id, and adding a walk-in name
+  (deduped). The worst a leaked code buys someone is noise, not damage.
 - The **admin token** is the real boundary — freezing, the current-talk banner,
   the live vote counts, and reading `/export` before the freeze. It is typed
   into `/wsadmin` once and held in `sessionStorage`; it is never built into any
   page and never written to `localStorage`. Closing the tab ends the session.
-- Every vote is an **upsert keyed on (person, category)**, so a replayed or
-  retried write is a no-op. That is what makes the phone's offline queue safe.
+- Every ballot write **replaces that person's whole ranking** in one atomic
+  batch, so a replayed or retried write is a no-op. That is what makes the
+  phone's offline queue safe.
 - `/export` is world-readable only after you freeze. Before that it takes the
   join code, so `/workshop` can render the network live during the session
   without votes-in-progress being readable from outside the room.
@@ -156,5 +157,5 @@ read a seat off the network. `anonymise()` also still honours an explicit
 `consent: false` on a person (the render path and the test fixture exercise it);
 nothing in the live flow sets it any more.
 
-The published network carries link counts only — never which categories a pair
-has in common, and never anyone's ballot.
+The published groups page carries the ballots: a list of who is in which group,
+and how they ranked it, cannot be drawn from anything less.
