@@ -8,7 +8,7 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "onkars"
-database_id = "c684479e-9e1d-4d8f-85e7-de5be92a5794"
+database_id = "c38d96ab-b8c2-4704-a272-0cdec42a0394"
 
 [vars]
 # Comma-separated. The first entry is the fallback for non-matching origins.

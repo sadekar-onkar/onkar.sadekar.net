@@ -363,7 +363,17 @@ def reset_data(db, keep, yes):
 
 def deploy(code, admin):
     step('Deploying the Worker')
-    out = run(['wrangler', 'deploy'])
+    out = run(['wrangler', 'deploy'], check=False)
+    if 'register a workers.dev subdomain' in out:
+        m = re.search(r'https://dash\.cloudflare\.com/\S+/workers/onboarding', out)
+        die('this Cloudflare account has no workers.dev subdomain yet, so the Worker\n'
+            'has nowhere to live. Pick one once (it becomes part of the API URL) at\n'
+            '    %s\n'
+            'then re-run this. The database is already set up and is reused.'
+            % (m.group(0) if m else 'https://dash.cloudflare.com -> Workers & Pages'))
+    if 'Uploaded' not in out and 'workers.dev' not in out:
+        sys.stderr.write(out)
+        die('`wrangler deploy` failed')
     urls = re.findall(r'https://[\w.-]+\.workers\.dev', out)
     if not urls:
         sys.stderr.write(out)
