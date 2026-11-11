@@ -305,7 +305,6 @@ if(p)document.documentElement.setAttribute('data-palette',p);}catch(e){}})();
     </div>
     <div class="footer-bottom">
       <p>&copy; <span data-year>%(year)s</span> %(name)s</p>
-      <p class="mono">Built by hand. No frameworks, no trackers.</p>
     </div>
   </div>
 </footer>

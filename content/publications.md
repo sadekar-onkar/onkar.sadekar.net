@@ -2,9 +2,9 @@
 eyebrow: Peer-reviewed & preprints
 title: Publications
 lede: >-
-  Ten peer-reviewed papers, plus preprints and work in progress, across network
-  science, evolutionary game theory, anthropology and statistical physics.
-  Everything here is also on
+  Peer-reviewed papers, preprints and work in progress, in network science,
+  evolutionary game theory, anthropology and statistical physics. The same list
+  is on
   [Google Scholar](https://scholar.google.com/citations?user=wRgJdSoAAAAJ).
 ungrouped: Preprints & in preparation   # don't split this section by year
 page_title: Publications — Onkar Sadekar

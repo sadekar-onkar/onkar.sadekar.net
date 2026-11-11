@@ -1,6 +1,7 @@
 ---
 tagline: >-
-  I study how the structure of groups shapes what people do together.<br>
+  I work on cooperation and cultural evolution, mostly with networks and
+  game theory.<br>
   Postdoctoral researcher in the **Human Evolutionary Ecology Group**,
   Department of Evolutionary Anthropology, **University of Zürich**.
 
@@ -13,27 +14,28 @@ selected: >-
 
 news_heading: Recently
 contact_lede: >-
-  I'm always glad to hear about collaborations, student projects, or a good
-  problem that needs a network.
+  Email is the best way to reach me. I'm happy to talk about possible
+  collaborations, and I read messages from students looking for a project.
 ---
 
 ## About
 
-I like to study human behaviour — why people cooperate, how culture takes hold
-and spreads, and what shapes the choices groups make together.
+Most of my work is about cooperation. Classical **evolutionary game theory**
+asks when two players will cooperate with each other. I am more interested in
+what happens once the dilemma belongs to a group of five or fifty, which is how
+public goods and collective action actually work. Making that switch changes a
+lot of the answers.
 
-Three things I keep coming back to: **evolutionary game theory**, and what it
-takes for cooperation to survive as the rules of the game change; **evolutionary
-anthropology and cultural evolution**, especially how connected a population
-needs to be for culture to accumulate; and **sports and team dynamics**, where
-the data is good enough to actually test an idea about how individuals and
-groups perform together.
+I also work on **cultural evolution** with evolutionary anthropologists, mainly
+on how connected a population has to be before knowledge starts accumulating
+instead of getting lost. And I spend some of my time on **sports data**, where
+individual skill and team context come apart in ways that are hard to see
+anywhere else.
 
-I came to this from statistical physics, which is where I started: stochastic
-processes, active matter, systems held far from equilibrium. I still like
-problems where a deliberately simple model produces behaviour nobody ordered —
-whether that is a sudden onset of cooperation, the spread of tool use between
-chimpanzee communities, or a batting collapse in a cricket match.
+Before any of this I was a statistical physicist, working on stochastic
+resetting and active matter. That is still roughly how I think about a problem:
+write down the smallest model that could plausibly produce the effect, then look
+at what it does that you never put in.
 
 ## Positions
 
@@ -54,20 +56,18 @@ Indian Institute of Science Education and Research (IISER), Pune.
 url: research.html#game-theory
 chips: Cooperation, Public goods games
 
-What it takes for cooperation to survive as the rules of the game change — from
-classic two-player dilemmas to the group dilemmas of public goods and common
-resources.
+Cooperation in group dilemmas: public goods, shared resources, and what keeps
+it stable when the rules of the game shift.
 
 ### Evolutionary anthropology & cultural evolution
 url: research.html#culture
 chips: Evolutionary anthropology, Fieldwork data
 
-Why some populations accumulate culture and others do not — in chimpanzees, and
-in contemporary hunter-gatherer societies.
+How connected a population has to be for knowledge to accumulate. First in
+chimpanzees, now in hunter-gatherer societies.
 
 ### Sports & team dynamics
 url: research.html#applied
 chips: Sports analytics, Team performance
 
-Separating individual skill from team context — in cricket, in basketball, and
-in other problems where the data is good enough to actually test an idea.
+Telling individual skill apart from team context, in cricket and in the NBA.
