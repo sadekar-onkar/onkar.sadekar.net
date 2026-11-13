@@ -28,3 +28,8 @@ builds, regroups in place, takes a live re-poll, survives being revived from a h
 and paints finite, spread-out coordinates — the failure mode when a canvas is
 measured at zero size is every node stacked on one point, which is invisible in
 code review and obvious here.
+
+**ballots.test.js** drives `wsadmin.js` the way the admin does — fake DOM, fake
+Store, a click on "Show the ballots" — and reads back the matrix it built: which
+rank lands in which cell, a non-voter still getting a row, the column totals,
+the legend, and the CSV down to the quoting of a name with a comma in it.

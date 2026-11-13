@@ -200,6 +200,16 @@ with a lower-bound prune. Tests check it against exhaustive search.
 The admin's K and s (`/state` → `groups`, `spread`) are what `/workshop` opens
 with; its own steppers explore other values locally.
 
+**The raw ballots.** `/wsadmin` also shows the matrix itself — the roster down,
+the projects across, each cell that person's rank — with first-choice and
+any-rank totals under the columns, and a `Download ballots.csv` button beside
+the JSON export. The rows come from the roster `/bootstrap` already returns, so
+somebody who has not voted is a blank row (which is the point: it answers "who
+still hasn't ranked anything?"). The ranks come from `/export`, the only
+endpoint that hands back ballots, so it is polled on its own slower timer
+— every 15 s, and only while the table is open. Closed, the screen costs
+exactly what it did before. The CSV is always a fresh read.
+
 **Free-tier budget.** The Worker was meant to run a week unattended. D1's free
 tier is 5M rows read a day, so: phones poll every 30 s (only a freeze or the
 talk banner can change under them), `/workshop` every 15 s and only re-solves
@@ -210,7 +220,9 @@ and `/export` in-isolate for 8 s, cleared by any write.
 A group list necessarily says who ranked what, so the page now carries the
 ballots themselves (names re-keyed by `anonymise()` as before).
 
-Run `./tests/run.sh` after touching any of this.
+Run `./tests/run.sh` after touching any of this. The ballot matrix and its CSV
+have their own suite (`tests/ballots.test.js`), which drives `wsadmin.js`
+against a fake DOM and a fake store.
 
 **Names.** The workshop is small and everyone knows everyone, so there is no
 consent step — every attendee is shown by name (this replaced an opt-in

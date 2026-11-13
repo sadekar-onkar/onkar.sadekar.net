@@ -1588,6 +1588,89 @@ svg.bip {
 .ws-qr b { color: var(--a1); }
 .ws-export { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; resize: vertical; }
 
+/* — the raw ballots: people down, projects across — */
+.ws-ballots { margin: 1.6rem 0 0; }
+.ws-ballots-head { align-items: center; }
+.ws-ballots-head .ws-note { margin: 0; }
+
+/* Ten projects will not fit a narrow column on a laptop, so the matrix scrolls
+   sideways with the names pinned. */
+.ws-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 0.9rem 0 0.8rem;
+  background: var(--surface);
+}
+
+.ws-table {
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  width: 100%;
+}
+.ws-table th,
+.ws-table td {
+  padding: 0.3rem 0.45rem;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.ws-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-soft);
+  color: var(--ink);
+  font-weight: 600;
+  z-index: 1;
+}
+.ws-table .ws-th-name {
+  position: sticky;
+  left: 0;
+  text-align: left;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 500;
+  z-index: 2;
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ws-table thead .ws-th-name { background: var(--bg-soft); z-index: 3; }
+.ws-table .ws-th-n { color: var(--ink-2); }
+.ws-table tbody tr:hover td,
+.ws-table tbody tr:hover .ws-th-name { background: var(--bg-soft); }
+.ws-table td[data-rank='0'] { color: var(--line); }
+.ws-table td[data-rank='1'] { color: var(--a1-ink); background: var(--a1); font-weight: 600; }
+.ws-table td[data-rank='2'] { color: var(--ink); background: color-mix(in srgb, var(--a1) 32%, transparent); }
+.ws-table td[data-rank='3'] { color: var(--ink); background: color-mix(in srgb, var(--a1) 18%, transparent); }
+.ws-table td[data-rank='4'] { color: var(--ink); background: color-mix(in srgb, var(--a1) 9%, transparent); }
+.ws-table tbody tr[data-empty='true'] .ws-th-name { color: var(--ink-2); font-style: italic; }
+.ws-table tfoot th,
+.ws-table tfoot td {
+  border-bottom: 0;
+  border-top: 1px solid var(--line);
+  background: var(--bg-soft);
+  color: var(--ink-2);
+}
+
+.ws-legend {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: grid;
+  gap: 0.15rem 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  font-size: 0.76rem;
+  color: var(--ink-2);
+}
+.ws-legend b {
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+}
+
 /* ------------------------------------------------------- the published net -- */
 
 .ws-figwrap { margin-bottom: clamp(2.5rem, 6vw, 3.5rem); }

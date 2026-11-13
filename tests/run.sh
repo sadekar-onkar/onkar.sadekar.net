@@ -38,6 +38,9 @@ run "groups" tests/groups.test.js
 # 3. the rendering path, headless
 run "render" tests/render.test.js
 
+# 4. the admin screen's raw-ballot matrix and its CSV
+run "ballots" tests/ballots.test.js
+
 echo
 [ $fail -eq 0 ] && echo "ALL SUITES PASSED" || echo "SOME SUITES FAILED"
 exit $fail
