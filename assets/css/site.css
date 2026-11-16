@@ -1283,6 +1283,23 @@ svg.bip {
 
 /* 9. Responsive ----------------------------------------------------------- */
 
+/* The links are never tucked behind a menu. When the row runs out of room they
+   drop to their own line under the brand and switcher. */
+@media (max-width: 58rem) {
+  .nav { flex-wrap: wrap; row-gap: 0.15rem; }
+  .nav-right { margin-left: auto; }
+  .nav-links {
+    order: 3;
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    margin: 0 -0.7rem;
+  }
+}
+@media (max-width: 30rem) {
+  .nav-links a { padding: 0.4rem 0.5rem; font-size: 0.875rem; }
+  .nav-links { margin: 0 -0.5rem; }
+}
+
 @media (max-width: 62rem) {
   .hero-grid { grid-template-columns: 1fr; }
   .hero-portrait { max-width: 15rem; justify-self: start; order: -1; }
@@ -1292,24 +1309,7 @@ svg.bip {
 @media (max-width: 46rem) {
   body { font-size: 1rem; }
 
-  .nav-toggle { display: inline-flex; align-items: center; order: 3; }
-  .nav-links {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0; right: 0;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    background: var(--surface);
-    border-block: 1px solid var(--line);
-    padding: 0.5rem;
-    box-shadow: var(--shadow);
-  }
-  .nav-links[data-open='true'] { display: flex; }
-  .nav-links a { padding: 0.7rem 0.8rem; font-size: 1rem; }
   .site-header { position: sticky; }
-  .nav { position: relative; flex-wrap: wrap; }
   .nav-right { margin-left: auto; }
 
 
