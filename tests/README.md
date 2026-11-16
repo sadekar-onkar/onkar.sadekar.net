@@ -1,7 +1,8 @@
 # tests
 
-The workshop code is the only part of this site with maths in it, and the only
-part where a silent wrong answer would look plausible. These check it.
+The workshop code and the paper figures are the parts of this site with maths
+in them, and the parts where a silent wrong answer would look plausible. These
+check them.
 
 ```bash
 ./tests/run.sh
@@ -33,3 +34,11 @@ code review and obvious here.
 Store, a click on "Show the ballots" — and reads back the matrix it built: which
 rank lands in which cell, a non-voter still getting a row, the column totals,
 the legend, and the CSV down to the quoting of a name with a comma in it.
+
+**viz.test.js** checks the interactive figures under the papers
+(`assets/js/viz/`): the closed-form results against what they were derived
+from (the PRL's tipping point and branches, the public goods thresholds, the
+uncertainty product against the heat cumulants), the simulated models'
+invariants with seeded random numbers, that the shipped India network still
+gives the hazard-map paper's Table 2, and that `publications.md`, the modules
+and the data files agree. It cannot see a canvas; open the figure for that.

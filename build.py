@@ -407,9 +407,48 @@ def load_publications():
                 'concepts': concepts,
                 'links': it.get('links', ''),
                 'note': it['body'],
+                'viz': it.get('viz', '').strip(),
+                'viz_title': it.get('viz_title', '').strip(),
             })
         groups.append((heading, papers))
     return meta, groups, tag_labels, concept_labels
+
+
+VIZ_ICON = ('<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true">'
+            '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z"/></svg>')
+
+
+def viz_exists(key):
+    return bool(key) and os.path.exists(os.path.join(ASSETS, 'js', 'viz', key + '.js'))
+
+
+def viz_panel(p):
+    """The interactive figure under a paper: `viz:` names the module in
+    assets/js/viz/, `viz_title:` is its heading, and the entry's Markdown body
+    is the note printed beneath it. The panel is empty and hidden until the
+    button is pressed; assets/js/viz.js fills it in then."""
+    key = p['viz']
+    if not viz_exists(key):
+        if key:
+            print('  ! publications.md: no assets/js/viz/%s.js for "%s"' % (key, p['title'][:40]))
+        return '', ''
+    pid = 'viz-' + slug(key)
+    title = p['viz_title'] or 'Interactive figure'
+    button = ('<button class="pub-link pub-link--viz" type="button" data-viz-open="%s" '
+              'aria-expanded="false" aria-controls="%s" hidden>%s Interactive</button>'
+              % (pid, pid, VIZ_ICON))
+    note = ('          <div class="viz-note">%s</div>\n' % md(p['note'])) if p['note'] else ''
+    panel = ('          <section class="viz" id="%s" data-viz="%s" aria-label="Interactive figure: %s" hidden>\n'
+             '            <header class="viz-head">\n'
+             '              <div><p class="viz-kicker">Interactive figure</p>'
+             '<h4 class="viz-title">%s</h4></div>\n'
+             '              <button class="viz-close" type="button" data-viz-close>Close</button>\n'
+             '            </header>\n'
+             '            <div class="viz-stage" data-viz-stage></div>\n'
+             '  %s'
+             '          </section>\n'
+             % (pid, e(key), e(title), md_inline(title), note))
+    return button, panel
 
 
 def pub_item(p):
@@ -418,16 +457,18 @@ def pub_item(p):
     title = ('<a href="%s">%s</a>' % (e(href), md_inline(p['title']))) if href else md_inline(p['title'])
     badge = '<span class="pub-badge">%s</span>' % e(p['badge']) if p['badge'] else ''
     venue = md_inline(p['venue']) if p['venue'] else ''
+    button, panel = viz_panel(p)
     return ('        <li class="pub" data-tags="%s" data-concepts="%s">\n'
             '          <div>\n'
             '            <h3 class="pub-title">%s%s</h3>\n'
             '            <p class="pub-authors">%s</p>\n'
             '            <p class="pub-venue">%s</p>\n'
-            '            <div class="pub-links">%s</div>\n'
+            '            <div class="pub-links">%s%s</div>\n'
             '          </div>\n'
+            '%s'
             '        </li>\n'
             % (e(' '.join(p['tags'])), e(' '.join(p['concepts'])),
-               title, badge, authors_html(p['authors']), venue, links_html(p['links'])))
+               title, badge, authors_html(p['authors']), venue, button, links_html(p['links']), panel))
 
 
 # ------------------------------------------ static bipartite concept graph ---
@@ -549,16 +590,25 @@ def build_home():
             % (i + 1, i + 1, e(t.get('url', 'research.html')), md_inline(t['title']),
                md(t['body']), chips))
 
+    def figure_link(p):
+        # straight to the paper's interactive figure on the publications page
+        if not viz_exists(p['viz']):
+            return ''
+        return ('            <div class="pub-links"><a class="pub-link pub-link--viz" '
+                'href="publications.html#viz-%s">%s Interactive figure</a></div>\n'
+                % (slug(p['viz']), VIZ_ICON))
+
     pubs = ''.join(
         '        <li class="pub">\n          <div>\n'
         '            <h3 class="pub-title">%s</h3>\n'
         '            <p class="pub-authors">%s</p>\n'
         '            <p class="pub-venue">%s</p>\n'
+        '%s'
         '          </div>\n        </li>\n'
         % (('<a href="%s">%s</a>' % (e(re.search(r'\|\s*([^,]+)', p['links']).group(1).strip()),
                                      md_inline(p['title'])))
            if re.search(r'\|\s*([^,]+)', p['links']) else md_inline(p['title']),
-           authors_html(p['authors']), md_inline(p['venue']))
+           authors_html(p['authors']), md_inline(p['venue']), figure_link(p))
         for p in selected)
 
     contact = ''.join(
@@ -712,8 +762,10 @@ def build_publications():
             out += '      </ol>\n'
 
     out += '    </div>\n  </section>\n'
+    js = ('<script src="assets/js/viz.js" defer></script>'
+          if any(viz_exists(p['viz']) for p in allpapers) else '')
     return page('publications.html', meta.get('page_title', 'Publications'),
-                meta.get('description', ''), out)
+                meta.get('description', ''), out, js)
 
 
 def build_collaborators():

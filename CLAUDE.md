@@ -30,7 +30,11 @@ files/
   photo.jpg          just replace it
   cv.pdf             just replace it
 assets/              css, js, fonts, favicon — design, not content
+  js/viz.js          the shell for the interactive figure under each paper
+  js/viz/<key>.js    one module per paper (see "The paper figures")
+  data/viz/*.json    the real data five of those modules draw
 build.py             content/ + files/  ->  _site/
+tools/               prep_viz_data.py — NOT part of the build (see below)
 workshop-api/        the Cloudflare Worker; NOT part of the site (see below)
 tests/               ./tests/run.sh — the workshop group solver and rendering
 _site/               build output; gitignored, never committed
@@ -76,6 +80,10 @@ Only `content/publications.md`. Copy a block:
 - `tags:` — filter buttons; keys come from `tags:` in site.md.
 - `concepts:` — the bipartite diagram; keys come from `concepts:` in site.md.
 - `links:` — `Label | url, Label | url`. The **first** link becomes the title link.
+
+- `viz:` / `viz_title:` — optional. The interactive figure under the paper and
+  its heading; `viz:` names a file in `assets/js/viz/`. Whatever Markdown you
+  write below the key lines is the note printed under the figure.
 
 The **collaborators page is generated from the `authors:` lines** — there is no
 separate people list to maintain. Give someone a profile link by adding them to
@@ -143,6 +151,71 @@ Two things in `network.js` are deliberate and should not be "fixed":
 
 Labels are placed largest-first with collision detection; any that would overlap
 one already placed is dropped.
+
+## The paper figures
+
+Every paper on the publications page has an **Interactive** button that opens a
+figure under it (added November 2026). `publications.html#viz-<key>` opens one
+directly, which is what the home page's "Interactive figure" links use.
+
+**Nothing loads until a button is pressed.** `viz.js` is the shell: it opens
+the panel, injects `assets/js/viz/<key>.js` on first use, and hands the module
+a small toolkit (theme-following canvas, sliders, an animation loop). A module
+is one `PaperViz.register('key', function (v) { ... })`. Loops stop when the
+panel is closed, off screen or the tab is hidden, and a step with nothing left
+to animate calls `loop.sleep()`. With reduced motion set, nothing autoplays.
+
+**What each one is — this matters more than how it looks.** A figure must not
+claim more than the paper does, so each is one of three honest things, and its
+note on the page says which:
+
+| key | paper | what is drawn |
+|---|---|---|
+| `explosive` | PRL 2024 | the paper's mean-field solution + a live well-mixed simulation of the same game |
+| `pgg` | arXiv 2026 | the paper's replicator equation, solved in closed form |
+| `gamesel` | PRE 2024 | the paper's well-mixed model, simulated (payoff / k, Fermi with w = 1, as in the paper's code) |
+| `tur` | PRE 2021 | closed-form heat statistics for two qubits / two oscillators; **the hybrid model is not drawn** |
+| `abp` | PRE 2020 | the model, simulated, all three resetting protocols |
+| `sep` | JSTAT 2020 | a small Monte Carlo version of the model on a ring |
+| `overlap` | JRSI 2025 | **the paper's own simulation output**, not a re-run |
+| `hazard` | Curr. Sci. 2021 | the paper's 446-city network; effective distance recomputed in the browser |
+| `chimps` | Science 2024 | the paper's site / behaviour / genetic-link data |
+| `cricket` | RSOS 2024 | real ODI careers from the paper's dataset |
+| `nba` | arXiv 2026 | counts from the play-by-play behind the paper |
+| `hoi` | NHB 2025 | a review, so: one model it covers (simplicial contagion) on a made-up network |
+
+Things that are deliberate:
+
+1. **`overlap` shows data, not a simulation.** A live lattice version was built
+   first and thrown away: at a few hundred players the model just falls into
+   all-cooperate or all-defect, and the averages the paper reports (1500
+   players, 400 runs, quasi-stationary method) never appear. A toy that
+   contradicts the paper is worse than no toy.
+2. **Chimpanzee site coordinates are approximate**, typed in by hand (the data
+   files have names and regions, not positions), and the coastline is a sketch.
+   The note says so. Do not use them for anything but the picture.
+3. **NBA lead changes are counted here as sign flips of the margin**, which is
+   not necessarily the paper's count. The last-lead-change histogram uses the
+   project's own table.
+4. The `tur` formulas assume resonant exchange coupling, `tau = sin^2(Jt)`.
+   They reproduce the structure the paper reports (a universal term >= 2 minus
+   or plus the entropy production) and `tests/viz.test.js` checks them against
+   the cumulants, but the constants in the time axis are not the paper's.
+
+**The data files** in `assets/data/viz/` are made by
+`python3 tools/prep_viz_data.py /path/to/onkar_main`, by hand, from research
+folders that live **outside this repo** (it needs numpy/pandas/scipy and the
+raw data; CI has neither and never runs it). The script is here so every number
+can be traced. It asserts that the pruned India network still gives the paper's
+Table 2 (Mumbai -> Thane 2.89, Pune 3.17, Delhi 3.70).
+
+`tests/viz.test.js` checks the formulas, the models' invariants, and that
+`publications.md`, the modules and the data files agree. It cannot check that a
+picture looks right: after changing a module, open it.
+
+To add a figure: write `assets/js/viz/<key>.js`, put `viz: <key>` on the paper,
+add the key to `KEYS` in `tests/viz.test.js`. To remove one, delete the two
+`viz` lines from the paper.
 
 ## The workshop
 

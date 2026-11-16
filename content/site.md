@@ -51,16 +51,14 @@ particles:
 # here: they are noindex, live-only, and would leave a dead nav item behind.
 # Uncomment the Workshop line below once content/workshop.json exists — until
 # then the page is real but empty, and there is no reason to advertise it.
-# Collaborators, Talks and Code are built and live at their URLs, but are
-# kept out of the nav on purpose — uncomment a line to put one back.
 nav:
   - {label: Home,          url: index.html}
   - {label: Research,      url: research.html}
   - {label: Publications,  url: publications.html}
+  - {label: Collaborators, url: collaborators.html}
+  - {label: Talks,         url: talks.html}
+  - {label: Code,          url: code.html}
   - {label: CV,            url: cv.html}
-# - {label: Collaborators, url: collaborators.html}
-# - {label: Talks,         url: talks.html}
-# - {label: Code,          url: code.html}
 # - {label: Workshop,      url: workshop.html}
 
 links:

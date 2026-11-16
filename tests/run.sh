@@ -29,7 +29,7 @@ run() {
 # 1. every browser script must at least parse
 run "parse" tests/parse.test.js "assets/js/groups.js assets/js/network.js \
 assets/js/store.js assets/js/vote.js assets/js/wsadmin.js assets/js/workshop.js \
-assets/js/site.js assets/js/particles.js"
+assets/js/site.js assets/js/particles.js assets/js/viz.js $(echo assets/js/viz/*.js)"
 
 # 2. the group-assignment maths: exactness against brute force, balance,
 #    the four solutions, single-choice voters staying put
@@ -40,6 +40,10 @@ run "render" tests/render.test.js
 
 # 4. the admin screen's raw-ballot matrix and its CSV
 run "ballots" tests/ballots.test.js
+
+# 5. the paper figures: the formulas and models behind them, and that content,
+#    modules and data files agree
+run "viz" tests/viz.test.js
 
 echo
 [ $fail -eq 0 ] && echo "ALL SUITES PASSED" || echo "SOME SUITES FAILED"
